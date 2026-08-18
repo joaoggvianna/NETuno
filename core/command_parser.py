@@ -22,6 +22,22 @@ class CommandParser:
         "encerrar",
         "fechar jarvis",
     }
+    _APP_COMMANDS = {
+        "abrir vscode": "vscode",
+        "abre vscode": "vscode",
+        "iniciar vscode": "vscode",
+        "abrir visual studio code": "vscode",
+        "abre visual studio code": "vscode",
+        "iniciar visual studio code": "vscode",
+        "abrir spotify": "spotify",
+        "abre spotify": "spotify",
+        "iniciar spotify": "spotify",
+    }
+    _WEBSITE_COMMANDS = {
+        "abrir youtube": "youtube",
+        "abre youtube": "youtube",
+        "ir para youtube": "youtube",
+    }
 
     def parse(self, text: str) -> ParsedCommand:
         normalized_text = self._normalize(text)
@@ -32,10 +48,18 @@ class CommandParser:
             intent = Intent.GET_DATE
         elif normalized_text in self._EXIT_COMMANDS:
             intent = Intent.EXIT
+        elif normalized_text in self._APP_COMMANDS:
+            intent = Intent.OPEN_APP
+        elif normalized_text in self._WEBSITE_COMMANDS:
+            intent = Intent.OPEN_WEBSITE
         else:
             intent = Intent.UNKNOWN
 
-        return ParsedCommand(intent=intent, original_text=text)
+        target = self._APP_COMMANDS.get(normalized_text)
+        if target is None:
+            target = self._WEBSITE_COMMANDS.get(normalized_text)
+
+        return ParsedCommand(intent=intent, original_text=text, target=target)
 
     @staticmethod
     def _normalize(text: str) -> str:

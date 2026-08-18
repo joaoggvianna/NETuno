@@ -23,10 +23,39 @@ class CommandParserTestCase(unittest.TestCase):
 
         self.assertEqual(command.intent, Intent.EXIT)
 
+    def test_parses_vscode_aliases_and_extracts_target(self) -> None:
+        aliases = (
+            "abrir vscode",
+            "abre vscode",
+            "iniciar vscode",
+            "abrir visual studio code",
+        )
+
+        for alias in aliases:
+            with self.subTest(alias=alias):
+                command = self.parser.parse(alias)
+                self.assertEqual(command.intent, Intent.OPEN_APP)
+                self.assertEqual(command.target, "vscode")
+
+    def test_parses_spotify_aliases_and_extracts_target(self) -> None:
+        for alias in ("abrir spotify", "abre spotify", "iniciar spotify"):
+            with self.subTest(alias=alias):
+                command = self.parser.parse(alias)
+                self.assertEqual(command.intent, Intent.OPEN_APP)
+                self.assertEqual(command.target, "spotify")
+
+    def test_parses_youtube_aliases_and_extracts_target(self) -> None:
+        for alias in ("abrir youtube", "abre youtube", "ir para youtube"):
+            with self.subTest(alias=alias):
+                command = self.parser.parse(alias)
+                self.assertEqual(command.intent, Intent.OPEN_WEBSITE)
+                self.assertEqual(command.target, "youtube")
+
     def test_returns_unknown_for_unsupported_command(self) -> None:
         command = self.parser.parse("faça café")
 
         self.assertEqual(command.intent, Intent.UNKNOWN)
+        self.assertIsNone(command.target)
 
 
 if __name__ == "__main__":

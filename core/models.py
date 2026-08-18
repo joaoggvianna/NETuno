@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import Optional
 
 
 class Intent(Enum):
@@ -7,6 +8,8 @@ class Intent(Enum):
 
     GET_TIME = auto()
     GET_DATE = auto()
+    OPEN_APP = auto()
+    OPEN_WEBSITE = auto()
     EXIT = auto()
     UNKNOWN = auto()
 
@@ -17,6 +20,7 @@ class ParsedCommand:
 
     intent: Intent
     original_text: str
+    target: Optional[str] = None
 
 
 @dataclass(frozen=True)
