@@ -10,17 +10,28 @@ class CommandParserTestCase(unittest.TestCase):
 
     def test_parses_time_command_with_accents(self) -> None:
         command = self.parser.parse("Que horas são?")
-
         self.assertEqual(command.intent, Intent.GET_TIME)
 
     def test_parses_date_command(self) -> None:
         command = self.parser.parse("qual a data de hoje")
-
         self.assertEqual(command.intent, Intent.GET_DATE)
+
+    def test_parses_system_status_aliases(self) -> None:
+        aliases = (
+            "status do computador",
+            "status do PC",
+            "Como está o computador?",
+            "como está o pc",
+            "uso do computador",
+        )
+
+        for alias in aliases:
+            with self.subTest(alias=alias):
+                command = self.parser.parse(alias)
+                self.assertEqual(command.intent, Intent.GET_SYSTEM_STATUS)
 
     def test_parses_exit_command(self) -> None:
         command = self.parser.parse("  Fechar Jarvis! ")
-
         self.assertEqual(command.intent, Intent.EXIT)
 
     def test_parses_vscode_aliases_and_extracts_target(self) -> None:
@@ -53,7 +64,6 @@ class CommandParserTestCase(unittest.TestCase):
 
     def test_returns_unknown_for_unsupported_command(self) -> None:
         command = self.parser.parse("faça café")
-
         self.assertEqual(command.intent, Intent.UNKNOWN)
         self.assertIsNone(command.target)
 
