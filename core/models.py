@@ -8,6 +8,7 @@ class Intent(Enum):
 
     GET_TIME = auto()
     GET_DATE = auto()
+    GET_SYSTEM_STATUS = auto()
     OPEN_APP = auto()
     OPEN_WEBSITE = auto()
     EXIT = auto()
