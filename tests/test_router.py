@@ -27,6 +27,28 @@ class RouterTestCase(unittest.TestCase):
         self.assertEqual(result.message, "Não reconheci esse comando.")
         self.assertFalse(result.should_exit)
 
+    def test_routes_open_app_intent(self) -> None:
+        expected_result = CommandResult(True, "Aplicativo tratado.")
+        router = Router(handlers={Intent.OPEN_APP: lambda command: expected_result})
+
+        result = router.dispatch(
+            ParsedCommand(Intent.OPEN_APP, "abrir vscode", target="vscode")
+        )
+
+        self.assertEqual(result, expected_result)
+
+    def test_routes_open_website_intent(self) -> None:
+        expected_result = CommandResult(True, "Site tratado.")
+        router = Router(
+            handlers={Intent.OPEN_WEBSITE: lambda command: expected_result}
+        )
+
+        result = router.dispatch(
+            ParsedCommand(Intent.OPEN_WEBSITE, "abrir youtube", target="youtube")
+        )
+
+        self.assertEqual(result, expected_result)
+
 
 if __name__ == "__main__":
     unittest.main()
