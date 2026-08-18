@@ -17,6 +17,13 @@ class CommandParser:
         "qual a data de hoje",
         "data de hoje",
     }
+    _SYSTEM_STATUS_COMMANDS = {
+        "status do computador",
+        "status do pc",
+        "como esta o computador",
+        "como esta o pc",
+        "uso do computador",
+    }
     _EXIT_COMMANDS = {
         "sair",
         "encerrar",
@@ -46,6 +53,8 @@ class CommandParser:
             intent = Intent.GET_TIME
         elif normalized_text in self._DATE_COMMANDS:
             intent = Intent.GET_DATE
+        elif normalized_text in self._SYSTEM_STATUS_COMMANDS:
+            intent = Intent.GET_SYSTEM_STATUS
         elif normalized_text in self._EXIT_COMMANDS:
             intent = Intent.EXIT
         elif normalized_text in self._APP_COMMANDS:
