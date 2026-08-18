@@ -27,6 +27,18 @@ class RouterTestCase(unittest.TestCase):
         self.assertEqual(result.message, "Não reconheci esse comando.")
         self.assertFalse(result.should_exit)
 
+    def test_routes_system_status_intent(self) -> None:
+        expected_result = CommandResult(True, "Status tratado.")
+        router = Router(
+            handlers={Intent.GET_SYSTEM_STATUS: lambda command: expected_result}
+        )
+
+        result = router.dispatch(
+            ParsedCommand(Intent.GET_SYSTEM_STATUS, "status do computador")
+        )
+
+        self.assertEqual(result, expected_result)
+
     def test_routes_open_app_intent(self) -> None:
         expected_result = CommandResult(True, "Aplicativo tratado.")
         router = Router(handlers={Intent.OPEN_APP: lambda command: expected_result})
