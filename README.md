@@ -1,4 +1,4 @@
-# NETuno v0.3
+# NETuno v0.4
 
 NETuno é um assistente pessoal digital em desenvolvimento, criado para combinar **assistência**, **automação** e **orquestração de dispositivos e serviços** em uma única experiência.
 
@@ -58,7 +58,7 @@ NETuno, iniciar modo estudo.
 
 ## Funcionalidades atuais
 
-Na v0.3, o NETuno consegue:
+Na v0.4, o NETuno consegue:
 
 - informar a hora local;
 - informar a data local;
@@ -66,6 +66,7 @@ Na v0.3, o NETuno consegue:
 - abrir Visual Studio Code no macOS;
 - abrir Spotify no macOS;
 - abrir YouTube no navegador padrão;
+- criar, listar e remover notas persistidas localmente;
 - encerrar a aplicação;
 - responder de forma previsível a comandos não reconhecidos.
 
@@ -79,6 +80,9 @@ status do pc
 abrir vscode
 abrir spotify
 abrir youtube
+criar nota comprar pão
+listar notas
+remover nota 1
 sair
 ```
 
@@ -112,6 +116,9 @@ resposta no terminal
 - `commands/system.py`: hora, data, status do computador e encerramento.
 - `commands/apps.py`: abertura dos aplicativos explicitamente suportados.
 - `commands/web.py`: abertura dos sites explicitamente suportados.
+- `commands/notes.py`: regras de criação, listagem e remoção de notas.
+- `database/database.py`: inicialização do SQLite e única camada que executa SQL.
+- `data/netuno.db`: banco local criado automaticamente e não versionado.
 - `tests/`: testes automatizados do parser, roteamento e handlers.
 
 O parser não executa ações diretamente, e os handlers não imprimem na tela. Eles devolvem um `CommandResult`. Essa separação permite testar interpretação e roteamento sem disparar efeitos colaterais e prepara o projeto para futuras entradas por voz, interface gráfica e integrações externas.
@@ -218,7 +225,8 @@ Instale as dependências:
 python3 -m pip install -r requirements.txt
 ```
 
-A v0.3 utiliza `psutil` para consultar as métricas do computador.
+A v0.4 utiliza `psutil` para consultar as métricas do computador e `sqlite3`,
+da biblioteca padrão, para persistir notas localmente.
 
 ## Executar
 
@@ -237,9 +245,19 @@ CPU: 21% | Memória: 63% | Disco: 42% | Ligado há: 3h 18min
 NETUNO > abrir youtube
 Abrindo YouTube.
 
+NETUNO > criar nota comprar pão
+Nota criada.
+
+NETUNO > listar notas
+1. comprar pão
+
 NETUNO > faça café
 Não reconheci esse comando.
 ```
+
+Os números exibidos representam a posição atual de cada nota na lista. Após
+uma remoção, a lista é numerada novamente a partir de `1`; os identificadores
+internos do SQLite permanecem estáveis.
 
 Os valores do status variam de acordo com o computador no momento da consulta.
 
@@ -286,7 +304,7 @@ Primeiro fluxo completo da arquitetura:
 
 Objetivo: transformar o NETuno de um executor de comandos em um assistente capaz de guardar informações.
 
-Planejado:
+Entregue:
 
 - SQLite;
 - criação de notas;
@@ -305,6 +323,9 @@ Nota criada.
 NETUNO > listar notas
 1. comprar presente
 2. terminar trabalho de redes
+
+NETUNO > remover nota 1
+Nota removida.
 ```
 
 ### v0.5 — Comandos compostos e modos
@@ -399,7 +420,8 @@ NETuno, abra o Spotify e toque o álbum Songs for the Deaf.
 ## Limitações atuais
 
 - a interpretação de linguagem é baseada em comandos e aliases explicitamente cadastrados;
-- ainda não há memória persistente;
+- as notas não possuem edição, categorias, tags ou busca;
+- a memória local está limitada às notas armazenadas neste computador;
 - não há reconhecimento ou síntese de voz;
 - ainda não existe wake word;
 - VS Code e Spotify só são abertos no macOS nesta versão;

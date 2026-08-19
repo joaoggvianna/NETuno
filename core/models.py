@@ -11,6 +11,9 @@ class Intent(Enum):
     GET_SYSTEM_STATUS = auto()
     OPEN_APP = auto()
     OPEN_WEBSITE = auto()
+    CREATE_NOTE = auto()
+    LIST_NOTES = auto()
+    DELETE_NOTE = auto()
     EXIT = auto()
     UNKNOWN = auto()
 
@@ -22,6 +25,8 @@ class ParsedCommand:
     intent: Intent
     original_text: str
     target: Optional[str] = None
+    content: Optional[str] = None
+    note_number: Optional[int] = None
 
 
 @dataclass(frozen=True)

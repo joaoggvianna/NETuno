@@ -2,6 +2,7 @@ from collections.abc import Callable, Mapping
 from typing import Optional
 
 from commands.apps import open_app
+from commands.notes import create_note, delete_note, list_notes
 from commands.system import (
     exit_jarvis,
     get_current_date,
@@ -26,6 +27,9 @@ class Router:
             Intent.GET_SYSTEM_STATUS: get_system_status,
             Intent.OPEN_APP: open_app,
             Intent.OPEN_WEBSITE: open_website,
+            Intent.CREATE_NOTE: create_note,
+            Intent.LIST_NOTES: list_notes,
+            Intent.DELETE_NOTE: delete_note,
             Intent.EXIT: exit_jarvis,
         }
 

@@ -62,6 +62,38 @@ class CommandParserTestCase(unittest.TestCase):
                 self.assertEqual(command.intent, Intent.OPEN_WEBSITE)
                 self.assertEqual(command.target, "youtube")
 
+    def test_parses_create_note_and_extracts_content(self) -> None:
+        command = self.parser.parse("criar nota comprar pão")
+
+        self.assertEqual(command.intent, Intent.CREATE_NOTE)
+        self.assertEqual(command.content, "comprar pão")
+
+    def test_parses_create_note_aliases(self) -> None:
+        for alias in ("anotar revisar banco", "nova nota estudar Python"):
+            with self.subTest(alias=alias):
+                command = self.parser.parse(alias)
+                self.assertEqual(command.intent, Intent.CREATE_NOTE)
+                self.assertIsNotNone(command.content)
+
+    def test_parses_list_notes_aliases(self) -> None:
+        for alias in ("listar notas", "mostrar notas", "minhas notas"):
+            with self.subTest(alias=alias):
+                command = self.parser.parse(alias)
+                self.assertEqual(command.intent, Intent.LIST_NOTES)
+
+    def test_parses_delete_note_and_extracts_id(self) -> None:
+        command = self.parser.parse("remover nota 3")
+
+        self.assertEqual(command.intent, Intent.DELETE_NOTE)
+        self.assertEqual(command.note_number, 3)
+
+    def test_delete_note_without_valid_id_does_not_raise(self) -> None:
+        for text in ("remover nota", "apagar nota abc"):
+            with self.subTest(text=text):
+                command = self.parser.parse(text)
+                self.assertEqual(command.intent, Intent.DELETE_NOTE)
+                self.assertIsNone(command.note_number)
+
     def test_returns_unknown_for_unsupported_command(self) -> None:
         command = self.parser.parse("faça café")
         self.assertEqual(command.intent, Intent.UNKNOWN)

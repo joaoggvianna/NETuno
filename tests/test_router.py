@@ -61,6 +61,20 @@ class RouterTestCase(unittest.TestCase):
 
         self.assertEqual(result, expected_result)
 
+    def test_routes_note_intents(self) -> None:
+        for intent in (
+            Intent.CREATE_NOTE,
+            Intent.LIST_NOTES,
+            Intent.DELETE_NOTE,
+        ):
+            with self.subTest(intent=intent):
+                expected_result = CommandResult(True, "Nota tratada.")
+                router = Router(handlers={intent: lambda command: expected_result})
+
+                result = router.dispatch(ParsedCommand(intent, "comando de nota"))
+
+                self.assertEqual(result, expected_result)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,13 +1,15 @@
 from core.assistant import Assistant
+from database.database import initialize_database
 
 
 def main() -> None:
     """Run the Jarvis command-line interface."""
+    initialize_database()
     assistant = Assistant()
 
     while True:
         try:
-            user_input = input("JARVIS > ")
+            user_input = input("NETUNO > ")
         except (EOFError, KeyboardInterrupt):
             print("\nAté mais.")
             break
