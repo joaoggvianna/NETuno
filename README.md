@@ -1,4 +1,4 @@
-# NETuno v0.6
+# NETuno v0.7
 
 NETuno é um assistente pessoal digital em desenvolvimento, criado para combinar **assistência**, **automação** e **orquestração de dispositivos e serviços** em uma única experiência.
 
@@ -58,7 +58,7 @@ NETuno, iniciar modo estudo.
 
 ## Funcionalidades atuais
 
-Na v0.6, o NETuno consegue:
+Na v0.7, o NETuno consegue:
 
 - informar a hora local;
 - informar a data local;
@@ -71,6 +71,7 @@ Na v0.6, o NETuno consegue:
 - executar composições explícitas de aplicativos e sites;
 - controlar reprodução, pausa e troca de faixas no Spotify local;
 - abrir buscas por música, álbum, artista ou termo no Spotify;
+- expor o mesmo Core por uma API HTTP local;
 - encerrar a aplicação;
 - responder de forma previsível a comandos não reconhecidos.
 
@@ -100,6 +101,18 @@ sair
 
 ## Como funciona hoje
 
+O terminal e a API HTTP são interfaces independentes para o mesmo Core:
+
+```text
+Terminal ─────┐
+              │
+              ↓
+          NETuno Core
+              ↑
+              │
+HTTP API ─────┘
+```
+
 O fluxo principal da aplicação é:
 
 ```text
@@ -121,6 +134,8 @@ resposta no terminal
 ### Responsabilidades
 
 - `main.py`: inicia o programa e mantém o loop do terminal.
+- `api/app.py`: expõe o `Assistant` através dos endpoints HTTP locais.
+- `api/schemas.py`: valida requests e define responses sem expor modelos internos.
 - `core/assistant.py`: conecta parser e router e expõe o fluxo principal do assistente.
 - `core/command_parser.py`: normaliza o texto, reconhece aliases e produz uma intenção estruturada.
 - `core/models.py`: define `Intent`, `ParsedCommand` e `CommandResult`.
@@ -240,7 +255,7 @@ Instale as dependências:
 python3 -m pip install -r requirements.txt
 ```
 
-A v0.6 utiliza `psutil` para consultar as métricas do computador e `sqlite3`,
+A v0.7 utiliza `psutil` para consultar as métricas do computador e `sqlite3`,
 da biblioteca padrão, para persistir notas localmente.
 
 ## Executar
@@ -289,6 +304,53 @@ uma remoção, a lista é numerada novamente a partir de `1`; os identificadores
 internos do SQLite permanecem estáveis.
 
 Os valores do status variam de acordo com o computador no momento da consulta.
+
+## API local
+
+A API reutiliza integralmente o fluxo `Assistant → CommandParser → Router →
+handlers`. O terminal continua sendo uma interface válida e independente.
+
+Inicie a API durante o desenvolvimento:
+
+```bash
+uvicorn api.app:app --reload
+```
+
+Se o executável instalado pelo `pip` não estiver no `PATH`, use:
+
+```bash
+python3 -m uvicorn api.app:app --reload
+```
+
+O Uvicorn utiliza `127.0.0.1:8000` por padrão. Endpoints disponíveis:
+
+```http
+GET /health
+POST /commands
+```
+
+Exemplo:
+
+```bash
+curl -X POST http://127.0.0.1:8000/commands \
+  -H "Content-Type: application/json" \
+  -d '{"command":"status do computador"}'
+```
+
+Resposta:
+
+```json
+{
+  "success": true,
+  "message": "CPU: 21% | Memória: 63% | Disco: 42% | Ligado há: 3h 18min",
+  "should_exit": false
+}
+```
+
+O comando `sair` apenas retorna `should_exit: true`; ele não encerra o servidor.
+A documentação automática padrão fica disponível em `http://127.0.0.1:8000/docs`.
+
+> A API da v0.7 foi projetada para execução local e não deve ser exposta diretamente à internet.
 
 ## Testes
 
@@ -405,9 +467,15 @@ frontend, voz e inteligência local continuam fora do escopo desta fase.
 
 ### v0.7 — API do NETuno Core
 
-- expor capacidades do Core por uma API local;
-- separar interface e lógica de negócio;
-- permitir que outros clientes enviem comandos ao NETuno.
+Entregue:
+
+- endpoints locais `GET /health` e `POST /commands`;
+- schemas explícitos de request e response;
+- reutilização da fachada `Assistant` sem duplicar o pipeline;
+- validação de comandos vazios na fronteira HTTP;
+- preservação de `should_exit` como decisão do cliente;
+- documentação automática do FastAPI;
+- testes HTTP e de integração API → Core.
 
 ### v0.8 — Interface web
 
@@ -478,6 +546,8 @@ frontend, voz e inteligência local continuam fora do escopo desta fase.
 - a memória local está limitada às notas armazenadas neste computador;
 - buscas por nome no Spotify abrem resultados, mas não iniciam automaticamente;
 - os controles avançados do Spotify dependem do aplicativo instalado no macOS;
+- a API não possui autenticação e deve permanecer restrita a `127.0.0.1`;
+- ainda não há CORS configurado porque não existe frontend nesta versão;
 - não há reconhecimento ou síntese de voz;
 - ainda não existe wake word;
 - VS Code e Spotify só são abertos no macOS nesta versão;
