@@ -55,7 +55,7 @@ def get_system_status(command: ParsedCommand) -> CommandResult:
     return CommandResult(success=True, message=message)
 
 
-def exit_jarvis(command: ParsedCommand) -> CommandResult:
+def exit_netuno(command: ParsedCommand) -> CommandResult:
     """Signal that the terminal loop should finish."""
     del command
     return CommandResult(success=True, message="Até mais.", should_exit=True)

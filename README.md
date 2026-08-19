@@ -1,4 +1,4 @@
-# NETuno v0.4
+# NETuno v0.6
 
 NETuno é um assistente pessoal digital em desenvolvimento, criado para combinar **assistência**, **automação** e **orquestração de dispositivos e serviços** em uma única experiência.
 
@@ -58,7 +58,7 @@ NETuno, iniciar modo estudo.
 
 ## Funcionalidades atuais
 
-Na v0.4, o NETuno consegue:
+Na v0.6, o NETuno consegue:
 
 - informar a hora local;
 - informar a data local;
@@ -67,6 +67,10 @@ Na v0.4, o NETuno consegue:
 - abrir Spotify no macOS;
 - abrir YouTube no navegador padrão;
 - criar, listar e remover notas persistidas localmente;
+- executar o modo estudo como uma sequência de ações;
+- executar composições explícitas de aplicativos e sites;
+- controlar reprodução, pausa e troca de faixas no Spotify local;
+- abrir buscas por música, álbum, artista ou termo no Spotify;
 - encerrar a aplicação;
 - responder de forma previsível a comandos não reconhecidos.
 
@@ -83,6 +87,14 @@ abrir youtube
 criar nota comprar pão
 listar notas
 remover nota 1
+modo estudo
+abrir vscode e spotify
+abrir spotify e youtube
+tocar música
+pausar spotify
+próxima faixa
+faixa anterior
+toque a música Everlong
 sair
 ```
 
@@ -117,6 +129,9 @@ resposta no terminal
 - `commands/apps.py`: abertura dos aplicativos explicitamente suportados.
 - `commands/web.py`: abertura dos sites explicitamente suportados.
 - `commands/notes.py`: regras de criação, listagem e remoção de notas.
+- `commands/modes.py`: orquestra modos e comandos compostos reutilizando handlers.
+- `commands/music.py`: traduz intenções musicais em operações do Spotify.
+- `integrations/spotify.py`: encapsula AppleScript e o protocolo local do Spotify.
 - `database/database.py`: inicialização do SQLite e única camada que executa SQL.
 - `data/netuno.db`: banco local criado automaticamente e não versionado.
 - `tests/`: testes automatizados do parser, roteamento e handlers.
@@ -225,7 +240,7 @@ Instale as dependências:
 python3 -m pip install -r requirements.txt
 ```
 
-A v0.4 utiliza `psutil` para consultar as métricas do computador e `sqlite3`,
+A v0.6 utiliza `psutil` para consultar as métricas do computador e `sqlite3`,
 da biblioteca padrão, para persistir notas localmente.
 
 ## Executar
@@ -250,6 +265,20 @@ Nota criada.
 
 NETUNO > listar notas
 1. comprar pão
+
+NETUNO > modo estudo
+Modo estudo iniciado.
+
+✓ Visual Studio Code
+✓ Spotify
+✓ ambiente de estudo
+
+NETUNO > pausar spotify
+Spotify pausado.
+
+NETUNO > toque a música Everlong
+Abri a busca pela música "Everlong" no Spotify, mas esta versão não consegue
+iniciar o resultado automaticamente.
 
 NETUNO > faça café
 Não reconheci esse comando.
@@ -330,24 +359,49 @@ Nota removida.
 
 ### v0.5 — Comandos compostos e modos
 
-- representar ações compostas;
-- sequenciar comandos;
-- "modo estudo";
-- "abra X e faça Y";
-- reaproveitar handlers existentes em vez de duplicar lógica.
+Entregue:
+
+- representação explícita de sequências cadastradas;
+- modo estudo com VS Code, Spotify e ambiente de estudo;
+- comandos compostos `abrir vscode e spotify` e `abrir spotify e youtube`;
+- execução completa mesmo quando uma ação individual falha;
+- reaproveitamento dos handlers existentes sem duplicar efeitos externos.
 
 ### v0.6 — Integrações de aplicativos
 
-- criar uma camada `integrations/`;
-- evoluir Spotify de simples abertura para controle de reprodução;
-- buscar faixa, álbum ou artista;
-- preparar suporte a outros serviços.
+Entregue:
+
+- camada `integrations/` separada dos comandos do usuário;
+- reprodução, retomada, pausa, próxima faixa e faixa anterior no Spotify;
+- busca segura por música, álbum, artista ou termo usando `spotify:search:`;
+- mensagens explícitas quando o Spotify não está disponível;
+- fallback honesto quando a busca não pode iniciar automaticamente o resultado;
+- testes sem reprodução real ou outros efeitos externos.
 
 Exemplo desejado:
 
 ```text
 NETuno, abra o Spotify e toque o álbum Songs for the Deaf.
 ```
+
+O Spotify instalado no macOS expõe controles locais e reprodução por URI
+conhecido, mas não oferece busca por nome via AppleScript. Por isso, consultas
+por texto abrem a tela de busca e não simulam que a reprodução foi iniciada.
+
+## Fim da fase determinística
+
+Com a v0.6, o NETuno conclui sua primeira fase. O Core determinístico agora é
+capaz de:
+
+- interpretar comandos conhecidos e extrair argumentos explícitos;
+- guardar notas em memória local persistente;
+- executar ações no computador e no navegador;
+- compor ações cadastradas;
+- operar modos reutilizáveis;
+- integrar aplicativos sem expor seus detalhes ao parser ou ao router.
+
+As próximas versões mudam o foco para arquitetura de produto e interfaces. API,
+frontend, voz e inteligência local continuam fora do escopo desta fase.
 
 ### v0.7 — API do NETuno Core
 
@@ -422,6 +476,8 @@ NETuno, abra o Spotify e toque o álbum Songs for the Deaf.
 - a interpretação de linguagem é baseada em comandos e aliases explicitamente cadastrados;
 - as notas não possuem edição, categorias, tags ou busca;
 - a memória local está limitada às notas armazenadas neste computador;
+- buscas por nome no Spotify abrem resultados, mas não iniciam automaticamente;
+- os controles avançados do Spotify dependem do aplicativo instalado no macOS;
 - não há reconhecimento ou síntese de voz;
 - ainda não existe wake word;
 - VS Code e Spotify só são abertos no macOS nesta versão;

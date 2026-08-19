@@ -30,6 +30,7 @@ class CommandParser:
         "sair",
         "encerrar",
         "fechar jarvis",
+        "fechar netuno",
     }
     _APP_COMMANDS = {
         "abrir vscode": "vscode",
@@ -58,12 +59,71 @@ class CommandParser:
     )
     _CREATE_NOTE_PREFIXES = ("criar nota", "anotar", "nova nota")
     _DELETE_NOTE_PREFIXES = ("remover nota", "apagar nota", "deletar nota")
+    _MODE_COMMANDS = {
+        "modo estudo": "study",
+        "iniciar modo estudo": "study",
+        "comecar modo estudo": "study",
+        "hora de estudar": "study",
+        "abrir vscode e spotify": "vscode_spotify",
+        "abrir visual studio code e spotify": "vscode_spotify",
+        "abrir spotify e youtube": "spotify_youtube",
+    }
+    _MUSIC_COMMANDS = {
+        "tocar musica": Intent.PLAY_MUSIC,
+        "continuar musica": Intent.RESUME_MUSIC,
+        "voltar musica": Intent.RESUME_MUSIC,
+        "pausar musica": Intent.PAUSE_MUSIC,
+        "pausar spotify": Intent.PAUSE_MUSIC,
+        "proxima musica": Intent.NEXT_TRACK,
+        "proxima faixa": Intent.NEXT_TRACK,
+        "pular musica": Intent.NEXT_TRACK,
+        "musica anterior": Intent.PREVIOUS_TRACK,
+        "faixa anterior": Intent.PREVIOUS_TRACK,
+        "voltar faixa": Intent.PREVIOUS_TRACK,
+    }
+    _MUSIC_QUERY_PATTERNS = (
+        (
+            re.compile(
+                r"^\s*toque\s+(?:a\s+)?m[uú]sica\s+(?P<query>.+?)\s*$",
+                re.IGNORECASE,
+            ),
+            "track",
+        ),
+        (
+            re.compile(
+                r"^\s*toque\s+(?:o\s+)?[aá]lbum\s+(?P<query>.+?)\s*$",
+                re.IGNORECASE,
+            ),
+            "album",
+        ),
+        (
+            re.compile(
+                r"^\s*toque\s+(?:o\s+)?artista\s+(?P<query>.+?)\s*$",
+                re.IGNORECASE,
+            ),
+            "artist",
+        ),
+        (
+            re.compile(
+                r"^\s*toque\s+(?P<query>.+?)\s+no\s+spotify\s*$",
+                re.IGNORECASE,
+            ),
+            None,
+        ),
+        (
+            re.compile(r"^\s*toque\s+(?P<query>.+?)\s*$", re.IGNORECASE),
+            None,
+        ),
+    )
 
     def parse(self, text: str) -> ParsedCommand:
         normalized_text = self._normalize(text)
         note_command = self._parse_note_command(text, normalized_text)
         if note_command is not None:
             return note_command
+        music_command = self._parse_music_command(text, normalized_text)
+        if music_command is not None:
+            return music_command
 
         if normalized_text in self._TIME_COMMANDS:
             intent = Intent.GET_TIME
@@ -77,14 +137,39 @@ class CommandParser:
             intent = Intent.OPEN_APP
         elif normalized_text in self._WEBSITE_COMMANDS:
             intent = Intent.OPEN_WEBSITE
+        elif normalized_text in self._MODE_COMMANDS:
+            intent = Intent.RUN_MODE
         else:
             intent = Intent.UNKNOWN
 
         target = self._APP_COMMANDS.get(normalized_text)
         if target is None:
             target = self._WEBSITE_COMMANDS.get(normalized_text)
+        if target is None:
+            target = self._MODE_COMMANDS.get(normalized_text)
 
         return ParsedCommand(intent=intent, original_text=text, target=target)
+
+    def _parse_music_command(
+        self, original_text: str, normalized_text: str
+    ) -> Optional[ParsedCommand]:
+        intent = self._MUSIC_COMMANDS.get(normalized_text)
+        if intent is not None:
+            return ParsedCommand(intent, original_text, target="spotify")
+
+        for pattern, media_type in self._MUSIC_QUERY_PATTERNS:
+            match = pattern.match(original_text)
+            if match is not None:
+                query = match.group("query").strip()
+                return ParsedCommand(
+                    Intent.PLAY_MUSIC,
+                    original_text,
+                    target="spotify",
+                    query=query,
+                    media_type=media_type,
+                )
+
+        return None
 
     def _parse_note_command(
         self, original_text: str, normalized_text: str
