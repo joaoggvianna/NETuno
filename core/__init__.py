@@ -1,1 +1,1 @@
-"""Core components of Jarvis."""
+"""Core components of NETuno."""

@@ -31,8 +31,10 @@ class CommandParserTestCase(unittest.TestCase):
                 self.assertEqual(command.intent, Intent.GET_SYSTEM_STATUS)
 
     def test_parses_exit_command(self) -> None:
-        command = self.parser.parse("  Fechar Jarvis! ")
-        self.assertEqual(command.intent, Intent.EXIT)
+        for alias in ("Fechar NETuno!", "Fechar Jarvis!"):
+            with self.subTest(alias=alias):
+                command = self.parser.parse(alias)
+                self.assertEqual(command.intent, Intent.EXIT)
 
     def test_parses_vscode_aliases_and_extracts_target(self) -> None:
         aliases = (
@@ -93,6 +95,73 @@ class CommandParserTestCase(unittest.TestCase):
                 command = self.parser.parse(text)
                 self.assertEqual(command.intent, Intent.DELETE_NOTE)
                 self.assertIsNone(command.note_number)
+
+    def test_parses_study_mode_aliases(self) -> None:
+        aliases = (
+            "modo estudo",
+            "iniciar modo estudo",
+            "começar modo estudo",
+            "hora de estudar",
+        )
+
+        for alias in aliases:
+            with self.subTest(alias=alias):
+                command = self.parser.parse(alias)
+                self.assertEqual(command.intent, Intent.RUN_MODE)
+                self.assertEqual(command.target, "study")
+
+    def test_parses_supported_composite_commands(self) -> None:
+        expected_targets = {
+            "abrir vscode e spotify": "vscode_spotify",
+            "abrir spotify e youtube": "spotify_youtube",
+        }
+
+        for text, target in expected_targets.items():
+            with self.subTest(text=text):
+                command = self.parser.parse(text)
+                self.assertEqual(command.intent, Intent.RUN_MODE)
+                self.assertEqual(command.target, target)
+
+    def test_parses_music_control_aliases(self) -> None:
+        expected_intents = {
+            "tocar música": Intent.PLAY_MUSIC,
+            "continuar música": Intent.RESUME_MUSIC,
+            "voltar música": Intent.RESUME_MUSIC,
+            "pausar música": Intent.PAUSE_MUSIC,
+            "pausar spotify": Intent.PAUSE_MUSIC,
+            "próxima música": Intent.NEXT_TRACK,
+            "próxima faixa": Intent.NEXT_TRACK,
+            "pular música": Intent.NEXT_TRACK,
+            "música anterior": Intent.PREVIOUS_TRACK,
+            "faixa anterior": Intent.PREVIOUS_TRACK,
+            "voltar faixa": Intent.PREVIOUS_TRACK,
+        }
+
+        for text, intent in expected_intents.items():
+            with self.subTest(text=text):
+                command = self.parser.parse(text)
+                self.assertEqual(command.intent, intent)
+                self.assertEqual(command.target, "spotify")
+
+    def test_extracts_music_query_and_explicit_media_type(self) -> None:
+        examples = {
+            "toque a música Everlong": ("Everlong", "track"),
+            "toque o álbum Songs for the Deaf": (
+                "Songs for the Deaf",
+                "album",
+            ),
+            "toque o artista Foo Fighters": ("Foo Fighters", "artist"),
+            "toque Everlong no Spotify": ("Everlong", None),
+            "toque Foo Fighters": ("Foo Fighters", None),
+        }
+
+        for text, (query, media_type) in examples.items():
+            with self.subTest(text=text):
+                command = self.parser.parse(text)
+                self.assertEqual(command.intent, Intent.PLAY_MUSIC)
+                self.assertEqual(command.target, "spotify")
+                self.assertEqual(command.query, query)
+                self.assertEqual(command.media_type, media_type)
 
     def test_returns_unknown_for_unsupported_command(self) -> None:
         command = self.parser.parse("faça café")

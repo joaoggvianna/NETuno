@@ -4,7 +4,7 @@ from typing import Optional
 
 
 class Intent(Enum):
-    """Actions understood by the current Jarvis version."""
+    """Actions understood by the current NETuno version."""
 
     GET_TIME = auto()
     GET_DATE = auto()
@@ -14,6 +14,12 @@ class Intent(Enum):
     CREATE_NOTE = auto()
     LIST_NOTES = auto()
     DELETE_NOTE = auto()
+    RUN_MODE = auto()
+    PLAY_MUSIC = auto()
+    PAUSE_MUSIC = auto()
+    RESUME_MUSIC = auto()
+    NEXT_TRACK = auto()
+    PREVIOUS_TRACK = auto()
     EXIT = auto()
     UNKNOWN = auto()
 
@@ -27,6 +33,8 @@ class ParsedCommand:
     target: Optional[str] = None
     content: Optional[str] = None
     note_number: Optional[int] = None
+    query: Optional[str] = None
+    media_type: Optional[str] = None
 
 
 @dataclass(frozen=True)

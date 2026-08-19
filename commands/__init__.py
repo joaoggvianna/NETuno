@@ -1,1 +1,1 @@
-"""Command handlers available to Jarvis."""
+"""Command handlers available to NETuno."""

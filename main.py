@@ -3,7 +3,7 @@ from database.database import initialize_database
 
 
 def main() -> None:
-    """Run the Jarvis command-line interface."""
+    """Run the NETuno command-line interface."""
     initialize_database()
     assistant = Assistant()
 

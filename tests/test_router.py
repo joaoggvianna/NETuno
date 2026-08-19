@@ -75,6 +75,36 @@ class RouterTestCase(unittest.TestCase):
 
                 self.assertEqual(result, expected_result)
 
+    def test_routes_run_mode_intent(self) -> None:
+        expected_result = CommandResult(True, "Modo tratado.")
+        router = Router(handlers={Intent.RUN_MODE: lambda command: expected_result})
+
+        result = router.dispatch(
+            ParsedCommand(Intent.RUN_MODE, "modo estudo", target="study")
+        )
+
+        self.assertEqual(result, expected_result)
+
+    def test_routes_music_intents(self) -> None:
+        music_intents = (
+            Intent.PLAY_MUSIC,
+            Intent.PAUSE_MUSIC,
+            Intent.RESUME_MUSIC,
+            Intent.NEXT_TRACK,
+            Intent.PREVIOUS_TRACK,
+        )
+
+        for intent in music_intents:
+            with self.subTest(intent=intent):
+                expected_result = CommandResult(True, "Música tratada.")
+                router = Router(handlers={intent: lambda command: expected_result})
+
+                result = router.dispatch(
+                    ParsedCommand(intent, "comando de música", target="spotify")
+                )
+
+                self.assertEqual(result, expected_result)
+
 
 if __name__ == "__main__":
     unittest.main()

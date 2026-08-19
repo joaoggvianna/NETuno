@@ -1,1 +1,1 @@
-"""Tests for Jarvis."""
+"""Tests for NETuno."""
