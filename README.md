@@ -1,12 +1,64 @@
-# Jarvis v0.3
+# NETuno v0.3
 
-Jarvis é um assistente pessoal de terminal escrito em Python. O projeto usa interpretação determinística de comandos: em vez de depender de uma LLM ou de APIs pagas de IA, frases conhecidas são normalizadas, convertidas em intenções explícitas e encaminhadas para handlers responsáveis por executar cada ação.
+NETuno é um assistente pessoal digital em desenvolvimento, criado para combinar **assistência**, **automação** e **orquestração de dispositivos e serviços** em uma única experiência.
 
-A ideia do projeto é evoluir incrementalmente para um assistente pessoal mais completo sem esconder a arquitetura atrás de uma caixa-preta de IA.
+A visão do produto é ir além de um simples administrador do computador. O objetivo é que o NETuno consiga receber comandos por texto e voz, responder ao usuário, lembrar informações, executar ações em aplicativos, consultar serviços conectados e, futuramente, operar a partir de uma interface web ou mobile como um assistente portátil.
+
+O projeto está sendo desenvolvido incrementalmente e sem depender de APIs pagas de IA. A base atual utiliza interpretação determinística de comandos, mantendo a arquitetura simples, testável e fácil de explicar.
+
+## Visão do produto
+
+O NETuno deve evoluir em torno de três pilares:
+
+### Assistente
+
+Responsável por ajudar o usuário com informações e contexto pessoal, como:
+
+- notas;
+- lembretes;
+- tarefas;
+- agenda;
+- rotinas;
+- memória local;
+- respostas por texto e voz.
+
+### Orquestrador
+
+Responsável por executar ações e integrar serviços, como:
+
+- abrir e controlar aplicativos;
+- interagir com Spotify e outros serviços;
+- consultar o estado do computador;
+- executar automações;
+- iniciar modos compostos, como "modo estudo";
+- controlar futuramente dispositivos conectados.
+
+### Interface
+
+Responsável pelas formas de interação com o usuário:
+
+- terminal;
+- voz;
+- wake word "NETuno";
+- interface web;
+- interface mobile/PWA;
+- aplicação desktop/agent local.
+
+A visão de longo prazo é permitir interações como:
+
+```text
+NETuno, abra o Spotify e toque Everlong.
+
+NETuno, como está meu computador?
+
+NETuno, me lembre de revisar banco de dados às 19h.
+
+NETuno, iniciar modo estudo.
+```
 
 ## Funcionalidades atuais
 
-Na v0.3, o Jarvis consegue:
+Na v0.3, o NETuno consegue:
 
 - informar a hora local;
 - informar a data local;
@@ -30,9 +82,9 @@ abrir youtube
 sair
 ```
 
-## Como funciona
+## Como funciona hoje
 
-O fluxo principal é:
+O fluxo principal da aplicação é:
 
 ```text
 texto do usuário
@@ -62,9 +114,100 @@ resposta no terminal
 - `commands/web.py`: abertura dos sites explicitamente suportados.
 - `tests/`: testes automatizados do parser, roteamento e handlers.
 
-O parser não executa ações diretamente, e os handlers não imprimem na tela. Eles devolvem um `CommandResult`. Essa separação permite testar a interpretação e o roteamento sem abrir programas durante os testes e prepara o projeto para futuras entradas por voz ou outras interfaces.
+O parser não executa ações diretamente, e os handlers não imprimem na tela. Eles devolvem um `CommandResult`. Essa separação permite testar interpretação e roteamento sem disparar efeitos colaterais e prepara o projeto para futuras entradas por voz, interface gráfica e integrações externas.
 
-## Requisitos
+## Arquitetura futura
+
+Conforme o projeto evoluir, a arquitetura tende a separar o núcleo do assistente, as integrações externas e os clientes de interface:
+
+```text
+                Usuário
+                  │
+        ┌─────────┴─────────┐
+        │                   │
+      Texto                Voz
+                            │
+                     Speech-to-Text
+        │                   │
+        └─────────┬─────────┘
+                  ↓
+             NETuno Core
+                  ↓
+          Parser / Intents
+                  ↓
+                Router
+                  ↓
+      ┌───────────┼───────────┐
+      ↓           ↓           ↓
+   Sistema     Spotify      Memória
+      │
+      ↓
+ CommandResult
+      │
+ ┌────┴────┐
+ ↓         ↓
+Texto     Text-to-Speech
+```
+
+Para acesso portátil, a visão inclui também:
+
+```text
+NETuno Web/Mobile Client
+          │
+          ↓
+      NETuno Core
+          │
+          ↓
+  NETuno Desktop Agent
+          │
+  ┌───────┼────────┐
+  ↓       ↓        ↓
+Sistema Spotify  Aplicativos
+```
+
+O cliente web/mobile não executaria ações diretamente no computador. Essas ações seriam delegadas ao agent local.
+
+## Voz e wake word
+
+A voz faz parte da visão principal do produto, não apenas como recurso estético.
+
+O fluxo desejado é:
+
+```text
+microfone
+   ↓
+wake word: "NETuno"
+   ↓
+gravação do comando
+   ↓
+Speech-to-Text
+   ↓
+NETuno Core
+   ↓
+CommandResult
+   ↓
+Text-to-Speech
+   ↓
+resposta falada
+```
+
+A intenção é priorizar tecnologias locais e gratuitas sempre que possível, evitando dependência obrigatória de APIs pagas.
+
+A detecção contínua da wake word será adicionada apenas quando o núcleo do assistente estiver mais maduro, pois envolve decisões adicionais de desempenho, privacidade e execução em segundo plano.
+
+## Identidade visual futura
+
+A interface futura do NETuno deve seguir uma identidade visual própria, com estética tecnológica e naval:
+
+- azul-marinho escuro;
+- azul aço;
+- cinza metálico;
+- branco frio;
+- detalhes discretos em azul brilhante.
+
+A proposta é uma interface limpa e sofisticada, evitando excesso de elementos de ficção científica ou neon.
+
+## Requisitos atuais
 
 - Python 3.9 ou superior
 - macOS para a abertura de Visual Studio Code e Spotify
@@ -88,13 +231,13 @@ python3 main.py
 Exemplo:
 
 ```text
-JARVIS > status do computador
+NETUNO > status do computador
 CPU: 21% | Memória: 63% | Disco: 42% | Ligado há: 3h 18min
 
-JARVIS > abrir youtube
+NETUNO > abrir youtube
 Abrindo YouTube.
 
-JARVIS > faça café
+NETUNO > faça café
 Não reconheci esse comando.
 ```
 
@@ -110,28 +253,156 @@ python3 -m unittest discover -v
 
 Os testes de aplicativos e navegador usam mocks para evitar efeitos colaterais durante a execução.
 
-## Evolução do projeto
+## Roadmap
 
-### v0.1
+### v0.1 — Núcleo mínimo
 
-Primeiro fluxo completo da arquitetura: hora, data, saída, parser, router e interface de terminal.
+Primeiro fluxo completo da arquitetura:
 
-### v0.2
+- parser;
+- intents;
+- router;
+- hora;
+- data;
+- encerramento;
+- interface de terminal.
 
-Primeiras ações reais: abertura de VS Code e Spotify no macOS e YouTube no navegador padrão.
+### v0.2 — Primeiras ações
 
-### v0.3
+- abertura de VS Code;
+- abertura de Spotify;
+- abertura de YouTube;
+- primeiros handlers com efeitos reais no sistema.
 
-Adiciona observabilidade básica do computador por meio do comando de status, utilizando `psutil` para CPU, memória, disco e uptime.
+### v0.3 — Observabilidade local
+
+- status de CPU;
+- memória;
+- disco;
+- uptime;
+- integração com `psutil`.
+
+### v0.4 — Memória local
+
+Objetivo: transformar o NETuno de um executor de comandos em um assistente capaz de guardar informações.
+
+Planejado:
+
+- SQLite;
+- criação de notas;
+- listagem de notas;
+- remoção de notas;
+- persistência entre execuções;
+- novas intents relacionadas a memória;
+- testes do banco usando uma base temporária.
+
+Exemplos esperados:
+
+```text
+NETUNO > criar nota comprar presente
+Nota criada.
+
+NETUNO > listar notas
+1. comprar presente
+2. terminar trabalho de redes
+```
+
+### v0.5 — Comandos compostos e modos
+
+- representar ações compostas;
+- sequenciar comandos;
+- "modo estudo";
+- "abra X e faça Y";
+- reaproveitar handlers existentes em vez de duplicar lógica.
+
+### v0.6 — Integrações de aplicativos
+
+- criar uma camada `integrations/`;
+- evoluir Spotify de simples abertura para controle de reprodução;
+- buscar faixa, álbum ou artista;
+- preparar suporte a outros serviços.
+
+Exemplo desejado:
+
+```text
+NETuno, abra o Spotify e toque o álbum Songs for the Deaf.
+```
+
+### v0.7 — API do NETuno Core
+
+- expor capacidades do Core por uma API local;
+- separar interface e lógica de negócio;
+- permitir que outros clientes enviem comandos ao NETuno.
+
+### v0.8 — Interface web
+
+- primeiro frontend visual;
+- identidade azul-marinho/metálica;
+- envio de comandos por texto;
+- visualização de respostas e status;
+- base para uma PWA.
+
+### v0.9 — NETuno Desktop Agent
+
+- processo local responsável por ações no computador;
+- comunicação com o NETuno Core;
+- execução controlada de comandos no dispositivo;
+- preparação para controle remoto seguro.
+
+### v1.0 — NETuno portátil
+
+- integração entre Client, Core e Desktop Agent;
+- acesso pela web/PWA;
+- status remoto do dispositivo;
+- execução remota de ações autorizadas.
+
+### v1.1 — Entrada e saída por voz
+
+- Speech-to-Text local;
+- Text-to-Speech local;
+- camada de voz desacoplada do Core;
+- respostas faladas.
+
+### v1.2 — Wake word "NETuno"
+
+- detecção local da palavra de ativação;
+- escuta passiva controlada;
+- gravação apenas após ativação;
+- indicadores claros de microfone ativo;
+- configurações de privacidade e ativação/desativação.
+
+### v1.3 — Linguagem mais flexível
+
+- melhorar interpretação de frases;
+- aliases dinâmicos;
+- extração de entidades e argumentos;
+- avaliar NLP local antes de introduzir LLM.
+
+### v2.0 — Inteligência local opcional
+
+- integração opcional com modelo local;
+- uso como fallback para comandos não reconhecidos;
+- preservar intents estruturadas e handlers determinísticos;
+- evitar tornar a arquitetura dependente de uma LLM.
+
+## Princípios do projeto
+
+- evolução incremental;
+- arquitetura compreensível;
+- sem overengineering;
+- ações explícitas e seguras;
+- testes para comportamento determinístico;
+- preferência por soluções gratuitas e locais;
+- IA como capacidade opcional, não como dependência estrutural;
+- privacidade como requisito importante para voz e automação.
 
 ## Limitações atuais
 
 - a interpretação de linguagem é baseada em comandos e aliases explicitamente cadastrados;
-- não há LLM, reconhecimento de voz ou síntese de voz;
+- ainda não há memória persistente;
+- não há reconhecimento ou síntese de voz;
+- ainda não existe wake word;
 - VS Code e Spotify só são abertos no macOS nesta versão;
 - apenas aplicativos e sites explicitamente suportados podem ser executados;
-- o Jarvis ainda não possui memória persistente ou banco de dados.
-
-## Próximos passos possíveis
-
-As próximas versões podem adicionar persistência local de notas com SQLite, comandos compostos, suporte a voz e, posteriormente, interpretação opcional com um modelo local. Essas funcionalidades ainda não fazem parte da v0.3.
+- ainda não há frontend web/mobile ou Desktop Agent;
+- não há LLM no projeto atual.
