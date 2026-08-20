@@ -96,6 +96,12 @@ class CommandParserTestCase(unittest.TestCase):
                 self.assertEqual(command.intent, Intent.DELETE_NOTE)
                 self.assertIsNone(command.note_number)
 
+    def test_preserves_negative_note_number_for_validation(self) -> None:
+        command = self.parser.parse("remover nota -1")
+
+        self.assertEqual(command.intent, Intent.DELETE_NOTE)
+        self.assertEqual(command.note_number, -1)
+
     def test_parses_study_mode_aliases(self) -> None:
         aliases = (
             "modo estudo",
@@ -126,7 +132,7 @@ class CommandParserTestCase(unittest.TestCase):
         expected_intents = {
             "tocar música": Intent.PLAY_MUSIC,
             "continuar música": Intent.RESUME_MUSIC,
-            "voltar música": Intent.RESUME_MUSIC,
+            "voltar música": Intent.PREVIOUS_TRACK,
             "pausar música": Intent.PAUSE_MUSIC,
             "pausar spotify": Intent.PAUSE_MUSIC,
             "próxima música": Intent.NEXT_TRACK,
@@ -162,6 +168,12 @@ class CommandParserTestCase(unittest.TestCase):
                 self.assertEqual(command.target, "spotify")
                 self.assertEqual(command.query, query)
                 self.assertEqual(command.media_type, media_type)
+
+    def test_returns_unknown_when_spotify_query_is_missing(self) -> None:
+        command = self.parser.parse("toque no spotify")
+
+        self.assertEqual(command.intent, Intent.UNKNOWN)
+        self.assertIsNone(command.query)
 
     def test_returns_unknown_for_unsupported_command(self) -> None:
         command = self.parser.parse("faça café")

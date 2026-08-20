@@ -75,6 +75,42 @@ class NotesCommandsTestCase(unittest.TestCase):
         self.assertEqual(result.message, "Nota não encontrada.")
         delete_note_mock.assert_not_called()
 
+    @patch("commands.notes.delete_note_from_database")
+    @patch("commands.notes.list_notes_from_database")
+    def test_rejects_missing_note_number(
+        self, list_notes_mock, delete_note_mock
+    ) -> None:
+        command = ParsedCommand(
+            Intent.DELETE_NOTE,
+            "remover nota abc",
+            note_number=None,
+        )
+
+        result = delete_note(command)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.message, "Informe um número de nota válido.")
+        list_notes_mock.assert_not_called()
+        delete_note_mock.assert_not_called()
+
+    @patch("commands.notes.delete_note_from_database")
+    @patch("commands.notes.list_notes_from_database")
+    def test_rejects_negative_note_number(
+        self, list_notes_mock, delete_note_mock
+    ) -> None:
+        command = ParsedCommand(
+            Intent.DELETE_NOTE,
+            "remover nota -1",
+            note_number=-1,
+        )
+
+        result = delete_note(command)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.message, "Informe um número de nota válido.")
+        list_notes_mock.assert_not_called()
+        delete_note_mock.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

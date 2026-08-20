@@ -1,4 +1,4 @@
-# NETuno v0.7
+# NETuno v0.8
 
 NETuno é um assistente pessoal digital em desenvolvimento, criado para combinar **assistência**, **automação** e **orquestração de dispositivos e serviços** em uma única experiência.
 
@@ -58,7 +58,7 @@ NETuno, iniciar modo estudo.
 
 ## Funcionalidades atuais
 
-Na v0.7, o NETuno consegue:
+Na v0.8, o NETuno consegue:
 
 - informar a hora local;
 - informar a data local;
@@ -72,6 +72,8 @@ Na v0.7, o NETuno consegue:
 - controlar reprodução, pausa e troca de faixas no Spotify local;
 - abrir buscas por música, álbum, artista ou termo no Spotify;
 - expor o mesmo Core por uma API HTTP local;
+- receber comandos por uma interface web responsiva;
+- exibir o status do Core e o histórico visual da sessão;
 - encerrar a aplicação;
 - responder de forma previsível a comandos não reconhecidos.
 
@@ -101,16 +103,14 @@ sair
 
 ## Como funciona hoje
 
-O terminal e a API HTTP são interfaces independentes para o mesmo Core:
+O terminal, a API HTTP e o cliente web utilizam o mesmo Core:
 
 ```text
-Terminal ─────┐
-              │
-              ↓
-          NETuno Core
-              ↑
-              │
-HTTP API ─────┘
+Terminal ───────────────┐
+                        ↓
+                    NETuno Core
+                        ↑
+Web Client → HTTP API ──┘
 ```
 
 O fluxo principal da aplicação é:
@@ -136,6 +136,9 @@ resposta no terminal
 - `main.py`: inicia o programa e mantém o loop do terminal.
 - `api/app.py`: expõe o `Assistant` através dos endpoints HTTP locais.
 - `api/schemas.py`: valida requests e define responses sem expor modelos internos.
+- `frontend/src/App.jsx`: coordena status, envio e histórico visual da sessão.
+- `frontend/src/api/netunoApi.js`: centraliza a comunicação HTTP com a API.
+- `frontend/src/components/`: componentes visuais pequenos e reutilizáveis.
 - `core/assistant.py`: conecta parser e router e expõe o fluxo principal do assistente.
 - `core/command_parser.py`: normaliza o texto, reconhece aliases e produz uma intenção estruturada.
 - `core/models.py`: define `Intent`, `ParsedCommand` e `CommandResult`.
@@ -255,7 +258,7 @@ Instale as dependências:
 python3 -m pip install -r requirements.txt
 ```
 
-A v0.7 utiliza `psutil` para consultar as métricas do computador e `sqlite3`,
+A v0.8 utiliza `psutil` para consultar as métricas do computador e `sqlite3`,
 da biblioteca padrão, para persistir notas localmente.
 
 ## Executar
@@ -351,6 +354,42 @@ O comando `sair` apenas retorna `should_exit: true`; ele não encerra o servidor
 A documentação automática padrão fica disponível em `http://127.0.0.1:8000/docs`.
 
 > A API da v0.7 foi projetada para execução local e não deve ser exposta diretamente à internet.
+
+## Frontend Web
+
+O cliente React oferece uma interface visual local para o mesmo NETuno Core. O
+fluxo é:
+
+```text
+Browser
+   ↓
+React
+   ↓
+HTTP
+   ↓
+FastAPI
+   ↓
+NETuno Core
+```
+
+Com a API rodando, inicie o frontend em outro terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Abra `http://localhost:5173/`. Ao carregar, a interface consulta `/health` e
+exibe `Online` ou `Offline`. Comandos podem ser enviados pelo botão ou pela tecla
+Enter, e as mensagens ficam no histórico da sessão até a página ser recarregada.
+
+A URL da API pode ser alterada durante o desenvolvimento com
+`VITE_NETUNO_API_URL`; sem essa variável, o cliente utiliza
+`http://127.0.0.1:8000`.
+
+O backend aceita CORS somente de `http://localhost:5173`. A interface permanece
+local e não deve ser exposta diretamente à internet.
 
 ## Testes
 
@@ -462,8 +501,8 @@ capaz de:
 - operar modos reutilizáveis;
 - integrar aplicativos sem expor seus detalhes ao parser ou ao router.
 
-As próximas versões mudam o foco para arquitetura de produto e interfaces. API,
-frontend, voz e inteligência local continuam fora do escopo desta fase.
+As versões seguintes iniciam a arquitetura de produto e interfaces sem alterar
+o Core determinístico já validado.
 
 ### v0.7 — API do NETuno Core
 
@@ -479,11 +518,15 @@ Entregue:
 
 ### v0.8 — Interface web
 
-- primeiro frontend visual;
-- identidade azul-marinho/metálica;
-- envio de comandos por texto;
-- visualização de respostas e status;
-- base para uma PWA.
+Entregue:
+
+- primeiro frontend React/Vite do NETuno;
+- identidade naval, tecnológica e metálica responsiva;
+- status inicial Online/Offline consultado via `/health`;
+- envio de comandos via `/commands` com bloqueio durante requisições;
+- histórico visual mantido apenas durante a sessão;
+- tratamento separado para respostas do Core e falhas de rede;
+- CORS restrito à origem local do Vite.
 
 ### v0.9 — NETuno Desktop Agent
 
@@ -547,7 +590,8 @@ Entregue:
 - buscas por nome no Spotify abrem resultados, mas não iniciam automaticamente;
 - os controles avançados do Spotify dependem do aplicativo instalado no macOS;
 - a API não possui autenticação e deve permanecer restrita a `127.0.0.1`;
-- ainda não há CORS configurado porque não existe frontend nesta versão;
+- o frontend é local e não possui autenticação ou acesso remoto;
+- o histórico visual desaparece ao recarregar a página;
 - não há reconhecimento ou síntese de voz;
 - ainda não existe wake word;
 - VS Code e Spotify só são abertos no macOS nesta versão;

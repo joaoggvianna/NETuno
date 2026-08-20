@@ -58,7 +58,11 @@ class CommandParser:
         re.IGNORECASE,
     )
     _CREATE_NOTE_PREFIXES = ("criar nota", "anotar", "nova nota")
-    _DELETE_NOTE_PREFIXES = ("remover nota", "apagar nota", "deletar nota")
+    _DELETE_NOTE_PATTERN = re.compile(
+        r"^\s*(?:remover|apagar|deletar)\s+nota"
+        r"(?:\s+(?P<number>.*?))?\s*[.!?]?\s*$",
+        re.IGNORECASE,
+    )
     _MODE_COMMANDS = {
         "modo estudo": "study",
         "iniciar modo estudo": "study",
@@ -71,7 +75,7 @@ class CommandParser:
     _MUSIC_COMMANDS = {
         "tocar musica": Intent.PLAY_MUSIC,
         "continuar musica": Intent.RESUME_MUSIC,
-        "voltar musica": Intent.RESUME_MUSIC,
+        "voltar musica": Intent.PREVIOUS_TRACK,
         "pausar musica": Intent.PAUSE_MUSIC,
         "pausar spotify": Intent.PAUSE_MUSIC,
         "proxima musica": Intent.NEXT_TRACK,
@@ -161,6 +165,8 @@ class CommandParser:
             match = pattern.match(original_text)
             if match is not None:
                 query = match.group("query").strip()
+                if self._normalize(query) == "no spotify":
+                    return None
                 return ParsedCommand(
                     Intent.PLAY_MUSIC,
                     original_text,
@@ -188,20 +194,16 @@ class CommandParser:
         if normalized_text in self._LIST_NOTES_COMMANDS:
             return ParsedCommand(Intent.LIST_NOTES, original_text)
 
-        for prefix in self._DELETE_NOTE_PREFIXES:
-            if normalized_text == prefix:
-                return ParsedCommand(Intent.DELETE_NOTE, original_text)
-
-            if normalized_text.startswith(f"{prefix} "):
-                raw_note_number = normalized_text[len(prefix) :].strip()
-                note_number = (
-                    int(raw_note_number) if raw_note_number.isdigit() else None
-                )
-                return ParsedCommand(
-                    Intent.DELETE_NOTE,
-                    original_text,
-                    note_number=note_number,
-                )
+        delete_match = self._DELETE_NOTE_PATTERN.match(original_text)
+        if delete_match is not None:
+            raw_note_number = (delete_match.group("number") or "").strip()
+            is_integer = raw_note_number.lstrip("+-").isdigit()
+            note_number = int(raw_note_number) if is_integer else None
+            return ParsedCommand(
+                Intent.DELETE_NOTE,
+                original_text,
+                note_number=note_number,
+            )
 
         return None
 

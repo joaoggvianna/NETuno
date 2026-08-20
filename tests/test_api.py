@@ -20,6 +20,30 @@ class ApiTestCase(unittest.TestCase):
             {"status": "ok", "service": "netuno"},
         )
 
+    def test_cors_allows_only_local_frontend_origin(self) -> None:
+        allowed_response = self.client.options(
+            "/commands",
+            headers={
+                "Origin": "http://localhost:5173",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+        blocked_response = self.client.options(
+            "/commands",
+            headers={
+                "Origin": "https://example.com",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+
+        self.assertEqual(allowed_response.status_code, 200)
+        self.assertEqual(
+            allowed_response.headers["access-control-allow-origin"],
+            "http://localhost:5173",
+        )
+        self.assertNotIn("access-control-allow-origin", blocked_response.headers)
+
     @patch("commands.system.datetime")
     def test_executes_simple_core_command(self, datetime_mock) -> None:
         datetime_mock.now.return_value.strftime.return_value = "14:30"
