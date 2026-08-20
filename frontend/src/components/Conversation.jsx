@@ -10,11 +10,7 @@ export default function Conversation({ messages, loading }) {
   }, [messages, loading]);
 
   if (!messages.length && !loading) {
-    return (
-      <div className="conversation conversation--empty">
-        <p>O histórico desta sessão aparecerá aqui.</p>
-      </div>
-    );
+    return null;
   }
 
   return (

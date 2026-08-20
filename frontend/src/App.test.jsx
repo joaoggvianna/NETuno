@@ -41,27 +41,30 @@ describe("App", () => {
     sendCommand.mockRejectedValue(new NetunoApiError(422));
     render(<App />);
 
-    await waitFor(() => expect(screen.getByText("Online")).toBeInTheDocument());
+    await waitFor(() => expect(checkHealth).toHaveBeenCalledOnce());
     submitCommand("comando inválido");
 
     expect(
       await screen.findByText("O NETuno Core não aceitou esse comando."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Online")).toBeInTheDocument();
-    expect(screen.queryByText("Offline")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("O Core não está acessível. Inicie a API local e tente novamente."),
+    ).not.toBeInTheDocument();
   });
 
   it("marca offline quando há falha de conexão", async () => {
     sendCommand.mockRejectedValue(new TypeError("Failed to fetch"));
     render(<App />);
 
-    await waitFor(() => expect(screen.getByText("Online")).toBeInTheDocument());
+    await waitFor(() => expect(checkHealth).toHaveBeenCalledOnce());
     submitCommand("que horas são");
 
     expect(
       await screen.findByText("Não foi possível conectar ao NETuno Core."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Offline")).toBeInTheDocument();
+    expect(
+      screen.getByText("O Core não está acessível. Inicie a API local e tente novamente."),
+    ).toBeInTheDocument();
   });
 
   it("encerra a sessão quando a API retorna should_exit", async () => {
@@ -71,7 +74,7 @@ describe("App", () => {
     });
     render(<App />);
 
-    await waitFor(() => expect(screen.getByText("Online")).toBeInTheDocument());
+    await waitFor(() => expect(checkHealth).toHaveBeenCalledOnce());
     submitCommand("sair");
 
     expect(await screen.findByText("Até mais.")).toBeInTheDocument();

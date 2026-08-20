@@ -4,6 +4,7 @@ import { NetunoApiError, checkHealth, sendCommand } from "./api/netunoApi";
 import CommandInput from "./components/CommandInput";
 import Conversation from "./components/Conversation";
 import Header from "./components/Header";
+import netunoMark from "./assets/netuno-mark.svg";
 
 const CONNECTION_ERROR = "Não foi possível conectar ao NETuno Core.";
 const REQUEST_ERROR = "O NETuno Core não aceitou esse comando.";
@@ -66,17 +67,17 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Header status={status} />
+      <Header />
 
       <main className="main-content">
         <section className="hero" aria-labelledby="hero-title">
-          <div className="core-orb" aria-hidden="true">
-            <span>Ψ</span>
+          <div className="hero-orb" aria-hidden="true">
+            <div className="hero-orb__current" />
+            <img src={netunoMark} alt="" />
           </div>
-          <p className="hero__eyebrow">NETuno Core · v0.8</p>
-          <h1 id="hero-title">Como posso ajudar?</h1>
+          <h1 id="hero-title">Como posso te ajudar hoje?</h1>
           <p className="hero__description">
-            Comande seu ambiente local com precisão.
+            Pergunte ou dê um comando ao NETuno.
           </p>
         </section>
 
@@ -98,12 +99,6 @@ export default function App() {
           <Conversation messages={messages} loading={loading} />
         </section>
       </main>
-
-      <footer className="app-footer">
-        <span>Sistema local</span>
-        <span aria-hidden="true">·</span>
-        <span>Sessão não persistente</span>
-      </footer>
     </div>
   );
 }
