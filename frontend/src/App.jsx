@@ -71,10 +71,7 @@ export default function App() {
 
       <main className="main-content">
         <section className="hero" aria-labelledby="hero-title">
-          <div className="hero-orb" aria-hidden="true">
-            <div className="hero-orb__current" />
-            <img src={netunoMark} alt="" />
-          </div>
+          <img className="hero-mark" src={netunoMark} alt="" />
           <h1 id="hero-title">Como posso te ajudar hoje?</h1>
           <p className="hero__description">
             Pergunte ou dê um comando ao NETuno.

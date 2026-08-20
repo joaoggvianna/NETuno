@@ -121,56 +121,12 @@ input:focus-visible {
   text-align: center;
 }
 
-.hero-orb {
-  width: clamp(132px, 17vw, 176px);
-  aspect-ratio: 1;
+.hero-mark {
+  width: clamp(108px, 14vw, 148px);
+  height: auto;
   margin: 0 auto 36px;
-  display: grid;
-  place-items: center;
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(67, 206, 202, 0.38);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 38% 28%, rgba(130, 233, 226, 0.28), transparent 26%),
-    radial-gradient(circle at 50% 70%, var(--navy-800), var(--navy-950) 72%);
-  box-shadow:
-    0 22px 56px rgba(1, 20, 27, 0.32),
-    inset 0 0 36px rgba(19, 190, 190, 0.08);
-  animation: orb-float 5s ease-in-out infinite;
-}
-
-.hero-orb::before,
-.hero-orb::after {
-  content: "";
-  position: absolute;
-  inset: 10%;
-  border: 1px solid rgba(67, 206, 202, 0.12);
-  border-radius: 50%;
-}
-
-.hero-orb::after {
-  inset: 20%;
-  border-color: rgba(67, 206, 202, 0.08);
-}
-
-.hero-orb img {
-  width: 54%;
-  height: 54%;
-  position: relative;
-  z-index: 2;
-  filter: drop-shadow(0 6px 16px rgba(19, 190, 190, 0.2));
-}
-
-.hero-orb__current {
-  width: 150%;
-  height: 45%;
-  position: absolute;
-  left: -25%;
-  bottom: -4%;
-  border-radius: 50%;
-  background: rgba(19, 190, 190, 0.12);
-  animation: current-shift 7s ease-in-out infinite alternate;
+  display: block;
+  animation: mark-float 6.5s ease-in-out infinite;
 }
 
 .hero h1 {
@@ -203,6 +159,7 @@ input:focus-visible {
   background: var(--surface);
   font-size: 13px;
   line-height: 1.45;
+  animation: interface-enter 280ms ease-out both;
 }
 
 .offline-notice {
@@ -222,11 +179,15 @@ input:focus-visible {
   border-radius: var(--radius-pill);
   background: var(--surface);
   box-shadow: 0 16px 40px rgba(1, 20, 27, 0.18);
-  transition: border-color 160ms ease, transform 160ms ease;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
 .command-form:focus-within {
   border-color: var(--teal-500);
+  box-shadow: 0 18px 44px rgba(1, 20, 27, 0.24);
   transform: translateY(-1px);
 }
 
@@ -259,11 +220,18 @@ input:focus-visible {
   cursor: pointer;
   font-size: 23px;
   line-height: 1;
-  transition: background-color 160ms ease;
+  transition:
+    background-color 160ms ease,
+    transform 120ms ease;
 }
 
 .command-form button:hover:not(:disabled) {
   background: var(--teal-400);
+  transform: translateY(-1px);
+}
+
+.command-form button:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
 }
 
 .command-form button:disabled {
@@ -281,6 +249,7 @@ input:focus-visible {
 .message {
   padding: 17px 0;
   border-top: 1px solid var(--border);
+  animation: interface-enter 300ms ease-out both;
 }
 
 .message:first-child {
@@ -295,22 +264,24 @@ input:focus-visible {
   background: var(--surface);
 }
 
-@keyframes orb-float {
+@keyframes mark-float {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translateY(0) rotate(0deg) scale(1);
   }
   50% {
-    transform: translateY(-7px);
+    transform: translateY(-6px) rotate(0.35deg) scale(1.006);
   }
 }
 
-@keyframes current-shift {
+@keyframes interface-enter {
   from {
-    transform: translateX(-4%) rotate(-2deg);
+    opacity: 0;
+    transform: translateY(6px);
   }
   to {
-    transform: translateX(4%) rotate(2deg);
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -384,8 +355,8 @@ input:focus-visible {
     padding-block: 46px 36px;
   }
 
-  .hero-orb {
-    width: 126px;
+  .hero-mark {
+    width: 104px;
     margin-bottom: 30px;
   }
 
@@ -417,6 +388,8 @@ input:focus-visible {
   *::before,
   *::after {
     scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
