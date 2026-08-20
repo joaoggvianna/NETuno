@@ -1,10 +1,17 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from api.schemas import CommandRequest, CommandResponse, HealthResponse
 from core.assistant import Assistant
 
 
-app = FastAPI(title="NETuno API", version="0.7.0")
+app = FastAPI(title="NETuno API", version="0.8.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 assistant = Assistant()
 
 
