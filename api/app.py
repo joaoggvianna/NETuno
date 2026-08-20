@@ -5,7 +5,7 @@ from api.schemas import CommandRequest, CommandResponse, HealthResponse
 from core.assistant import Assistant
 
 
-app = FastAPI(title="NETuno API", version="0.8.0")
+app = FastAPI(title="NETuno API", version="0.9.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
