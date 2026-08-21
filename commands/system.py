@@ -4,7 +4,8 @@ from core.agent_client import AgentClient, AgentClientError
 from core.models import CommandResult, ParsedCommand
 
 
-agent_client = AgentClient()
+def get_agent_client() -> AgentClient:
+    return AgentClient()
 
 
 def get_current_time(command: ParsedCommand) -> CommandResult:
@@ -26,7 +27,7 @@ def get_system_status(command: ParsedCommand) -> CommandResult:
     del command
 
     try:
-        result = agent_client.get_system_status()
+        result = get_agent_client().get_system_status()
     except AgentClientError as error:
         return CommandResult(False, str(error))
 

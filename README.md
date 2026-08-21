@@ -292,6 +292,10 @@ na internet. A URL usada pelo Core pode ser alterada com `NETUNO_AGENT_URL`, mas
 somente endereços localhost são aceitos. O fallback é
 `http://127.0.0.1:8001`.
 
+Como proteção adicional, o próprio serviço rejeita com HTTP 403 qualquer
+request cujo endereço real do cliente não seja `127.0.0.1` ou `::1`, mesmo se
+for iniciado acidentalmente em uma interface de rede externa.
+
 ### Terminal
 
 Em outro terminal, na raiz do projeto:
@@ -341,6 +345,9 @@ Os valores do status variam de acordo com o computador no momento da consulta.
 Se o Desktop Agent estiver desligado, as ações migradas retornam
 `O NETuno Desktop Agent não está disponível.` sem fallback local. Hora, data,
 notas e demais comandos independentes do Agent continuam funcionando.
+Uma `NETUNO_AGENT_URL` externa ou inválida também não impede a inicialização do
+Core; somente comandos dependentes do Agent retornam
+`A configuração do NETuno Desktop Agent é inválida.`
 
 ## API local
 

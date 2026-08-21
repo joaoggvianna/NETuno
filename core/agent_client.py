@@ -8,6 +8,9 @@ import httpx
 
 DEFAULT_AGENT_URL = "http://127.0.0.1:8001"
 AGENT_OFFLINE_MESSAGE = "O NETuno Desktop Agent não está disponível."
+AGENT_CONFIGURATION_MESSAGE = (
+    "A configuração do NETuno Desktop Agent é inválida."
+)
 
 
 class AgentClientError(RuntimeError):
@@ -16,6 +19,10 @@ class AgentClientError(RuntimeError):
 
 class AgentUnavailableError(AgentClientError):
     """Raised when the Desktop Agent cannot be reached."""
+
+
+class AgentConfigurationError(AgentClientError):
+    """Raised when the configured Agent URL is not safe or valid."""
 
 
 class InvalidAgentResponseError(AgentClientError):
@@ -101,9 +108,20 @@ class AgentClient:
             ) from error
 
     def _validate_local_url(self) -> None:
-        parsed_url = urlparse(self._base_url)
+        try:
+            parsed_url = urlparse(self._base_url)
+            parsed_url.port
+        except ValueError as error:
+            raise AgentConfigurationError(
+                AGENT_CONFIGURATION_MESSAGE
+            ) from error
+
         if (
             parsed_url.scheme not in {"http", "https"}
             or parsed_url.hostname not in {"127.0.0.1", "localhost", "::1"}
+            or parsed_url.username is not None
+            or parsed_url.password is not None
+            or parsed_url.query
+            or parsed_url.fragment
         ):
-            raise ValueError("NETUNO_AGENT_URL deve apontar para localhost.")
+            raise AgentConfigurationError(AGENT_CONFIGURATION_MESSAGE)

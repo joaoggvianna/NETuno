@@ -13,12 +13,13 @@ from core.models import Intent, ParsedCommand
 
 
 class MusicCommandsTestCase(unittest.TestCase):
-    @patch("commands.music.agent_client")
-    def test_delegates_playback_controls_to_agent(self, agent_client_mock) -> None:
-        agent_client_mock.spotify_play.return_value = AgentResult(True)
-        agent_client_mock.spotify_pause.return_value = AgentResult(True)
-        agent_client_mock.spotify_next.return_value = AgentResult(True)
-        agent_client_mock.spotify_previous.return_value = AgentResult(True)
+    @patch("commands.music.get_agent_client")
+    def test_delegates_playback_controls_to_agent(self, get_client_mock) -> None:
+        client = get_client_mock.return_value
+        client.spotify_play.return_value = AgentResult(True)
+        client.spotify_pause.return_value = AgentResult(True)
+        client.spotify_next.return_value = AgentResult(True)
+        client.spotify_previous.return_value = AgentResult(True)
         commands = (
             (play_music, Intent.PLAY_MUSIC, "spotify_play"),
             (resume_music, Intent.RESUME_MUSIC, "spotify_play"),
@@ -31,12 +32,12 @@ class MusicCommandsTestCase(unittest.TestCase):
             with self.subTest(intent=intent):
                 result = handler(ParsedCommand(intent, "música", target="spotify"))
                 self.assertTrue(result.success)
-                getattr(agent_client_mock, method_name).assert_called_once_with()
-                getattr(agent_client_mock, method_name).reset_mock()
+                getattr(client, method_name).assert_called_once_with()
+                getattr(client, method_name).reset_mock()
 
-    @patch("commands.music.agent_client")
-    def test_returns_agent_execution_error(self, agent_client_mock) -> None:
-        agent_client_mock.spotify_pause.return_value = AgentResult(
+    @patch("commands.music.get_agent_client")
+    def test_returns_agent_execution_error(self, get_client_mock) -> None:
+        get_client_mock.return_value.spotify_pause.return_value = AgentResult(
             False,
             "Spotify indisponível.",
             "execution_error",
@@ -49,11 +50,12 @@ class MusicCommandsTestCase(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertEqual(result.message, "Spotify indisponível.")
 
-    @patch("commands.music.agent_client")
+    @patch("commands.music.get_agent_client")
     def test_opens_search_but_does_not_claim_playback(
-        self, agent_client_mock
+        self, get_client_mock
     ) -> None:
-        agent_client_mock.spotify_search.return_value = AgentResult(True)
+        client = get_client_mock.return_value
+        client.spotify_search.return_value = AgentResult(True)
         command = ParsedCommand(
             Intent.PLAY_MUSIC,
             "toque a música Everlong",
@@ -65,16 +67,18 @@ class MusicCommandsTestCase(unittest.TestCase):
         result = play_music(command)
 
         self.assertFalse(result.success)
-        agent_client_mock.spotify_search.assert_called_once_with("Everlong")
+        client.spotify_search.assert_called_once_with("Everlong")
         self.assertIn('Abri a busca pela música "Everlong"', result.message)
         self.assertIn("não consegue iniciar", result.message)
 
-    @patch("commands.music.agent_client")
+    @patch("commands.music.get_agent_client")
     def test_returns_friendly_error_when_agent_is_offline(
-        self, agent_client_mock
+        self, get_client_mock
     ) -> None:
-        agent_client_mock.spotify_pause.side_effect = AgentUnavailableError(
-            "O NETuno Desktop Agent não está disponível."
+        get_client_mock.return_value.spotify_pause.side_effect = (
+            AgentUnavailableError(
+                "O NETuno Desktop Agent não está disponível."
+            )
         )
 
         result = pause_music(

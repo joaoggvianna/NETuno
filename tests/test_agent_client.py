@@ -6,6 +6,8 @@ import httpx
 
 from core.agent_client import (
     AgentClient,
+    AgentClientError,
+    AgentConfigurationError,
     AgentUnavailableError,
     InvalidAgentResponseError,
 )
@@ -94,8 +96,18 @@ class AgentClientTestCase(unittest.TestCase):
         self.assertEqual(client._base_url, "http://localhost:8123")
 
     def test_rejects_non_local_agent_url(self) -> None:
-        with self.assertRaisesRegex(ValueError, "localhost"):
+        with self.assertRaises(AgentConfigurationError) as context:
             AgentClient("https://agent.example.com")
+
+        self.assertIsInstance(context.exception, AgentClientError)
+        self.assertEqual(
+            str(context.exception),
+            "A configuração do NETuno Desktop Agent é inválida.",
+        )
+
+    def test_rejects_malformed_local_agent_url(self) -> None:
+        with self.assertRaises(AgentConfigurationError):
+            AgentClient("http://localhost:not-a-port")
 
 
 if __name__ == "__main__":

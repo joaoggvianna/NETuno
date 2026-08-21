@@ -7,9 +7,10 @@ from core.models import Intent, ParsedCommand
 
 
 class SystemCommandsTestCase(unittest.TestCase):
-    @patch("commands.system.agent_client")
-    def test_formats_system_status_from_agent_data(self, agent_client_mock) -> None:
-        agent_client_mock.get_system_status.return_value = AgentResult(
+    @patch("commands.system.get_agent_client")
+    def test_formats_system_status_from_agent_data(self, get_client_mock) -> None:
+        client = get_client_mock.return_value
+        client.get_system_status.return_value = AgentResult(
             True,
             data={
                 "cpu_percent": 27.4,
@@ -28,11 +29,11 @@ class SystemCommandsTestCase(unittest.TestCase):
             result.message,
             "CPU: 27% | Memória: 63% | Disco: 42% | Ligado há: 1d 1h 1min",
         )
-        agent_client_mock.get_system_status.assert_called_once_with()
+        client.get_system_status.assert_called_once_with()
 
-    @patch("commands.system.agent_client")
-    def test_returns_agent_execution_error(self, agent_client_mock) -> None:
-        agent_client_mock.get_system_status.return_value = AgentResult(
+    @patch("commands.system.get_agent_client")
+    def test_returns_agent_execution_error(self, get_client_mock) -> None:
+        get_client_mock.return_value.get_system_status.return_value = AgentResult(
             False,
             "Não foi possível consultar o status do computador.",
             "execution_error",
@@ -48,12 +49,14 @@ class SystemCommandsTestCase(unittest.TestCase):
             "Não foi possível consultar o status do computador.",
         )
 
-    @patch("commands.system.agent_client")
+    @patch("commands.system.get_agent_client")
     def test_returns_friendly_error_when_agent_is_offline(
-        self, agent_client_mock
+        self, get_client_mock
     ) -> None:
-        agent_client_mock.get_system_status.side_effect = AgentUnavailableError(
-            "O NETuno Desktop Agent não está disponível."
+        get_client_mock.return_value.get_system_status.side_effect = (
+            AgentUnavailableError(
+                "O NETuno Desktop Agent não está disponível."
+            )
         )
 
         result = get_system_status(

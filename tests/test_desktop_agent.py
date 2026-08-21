@@ -10,7 +10,7 @@ from desktop_agent.schemas import ActionRequest, ActionResponse
 
 class DesktopAgentApiTestCase(unittest.TestCase):
     def setUp(self) -> None:
-        self.client = TestClient(app)
+        self.client = TestClient(app, client=("127.0.0.1", 50_000))
 
     def test_health(self) -> None:
         response = self.client.get("/health")
@@ -20,6 +20,34 @@ class DesktopAgentApiTestCase(unittest.TestCase):
             response.json(),
             {"status": "ok", "service": "netuno-desktop-agent"},
         )
+
+    def test_accepts_ipv6_loopback(self) -> None:
+        client = TestClient(app, client=("::1", 50_000))
+
+        response = client.get("/health")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_rejects_external_health_request(self) -> None:
+        client = TestClient(app, client=("192.168.1.20", 50_000))
+
+        response = client.get("/health")
+
+        self.assertEqual(response.status_code, 403)
+
+    @patch("desktop_agent.app.executor")
+    def test_rejects_external_action_before_executor(
+        self, executor_mock
+    ) -> None:
+        client = TestClient(app, client=("10.0.0.8", 50_000))
+
+        response = client.post(
+            "/actions",
+            json={"action": "open_app", "target": "spotify"},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        executor_mock.execute.assert_not_called()
 
     @patch("desktop_agent.app.executor")
     def test_actions_uses_structured_request(self, executor_mock) -> None:

@@ -4,14 +4,15 @@ from core.agent_client import AgentClient, AgentClientError, AgentResult
 from core.models import CommandResult, ParsedCommand
 
 
-agent_client = AgentClient()
+def get_agent_client() -> AgentClient:
+    return AgentClient()
 
 
 def play_music(command: ParsedCommand) -> CommandResult:
     """Resume playback or open a truthful search fallback for a named item."""
     if command.query:
         try:
-            result = agent_client.spotify_search(command.query)
+            result = get_agent_client().spotify_search(command.query)
         except AgentClientError as error:
             return CommandResult(False, str(error))
 
@@ -33,7 +34,7 @@ def play_music(command: ParsedCommand) -> CommandResult:
         )
 
     return _run_spotify_action(
-        agent_client.spotify_play,
+        "spotify_play",
         "Reprodução iniciada no Spotify.",
     )
 
@@ -41,20 +42,20 @@ def play_music(command: ParsedCommand) -> CommandResult:
 def resume_music(command: ParsedCommand) -> CommandResult:
     del command
     return _run_spotify_action(
-        agent_client.spotify_play,
+        "spotify_play",
         "Reprodução retomada no Spotify.",
     )
 
 
 def pause_music(command: ParsedCommand) -> CommandResult:
     del command
-    return _run_spotify_action(agent_client.spotify_pause, "Spotify pausado.")
+    return _run_spotify_action("spotify_pause", "Spotify pausado.")
 
 
 def next_track(command: ParsedCommand) -> CommandResult:
     del command
     return _run_spotify_action(
-        agent_client.spotify_next,
+        "spotify_next",
         "Avançando para a próxima faixa.",
     )
 
@@ -62,15 +63,18 @@ def next_track(command: ParsedCommand) -> CommandResult:
 def previous_track(command: ParsedCommand) -> CommandResult:
     del command
     return _run_spotify_action(
-        agent_client.spotify_previous,
+        "spotify_previous",
         "Voltando para a faixa anterior.",
     )
 
 
 def _run_spotify_action(
-    action: Callable[[], AgentResult], success_message: str
+    action_name: str, success_message: str
 ) -> CommandResult:
     try:
+        action: Callable[[], AgentResult] = getattr(
+            get_agent_client(), action_name
+        )
         result = action()
     except AgentClientError as error:
         return CommandResult(False, str(error))
