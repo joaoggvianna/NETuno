@@ -1,9 +1,11 @@
 from datetime import datetime
-import os
 
-import psutil
-
+from core.agent_client import AgentClient, AgentClientError
 from core.models import CommandResult, ParsedCommand
+
+
+def get_agent_client() -> AgentClient:
+    return AgentClient()
 
 
 def get_current_time(command: ParsedCommand) -> CommandResult:
@@ -21,19 +23,27 @@ def get_current_date(command: ParsedCommand) -> CommandResult:
 
 
 def get_system_status(command: ParsedCommand) -> CommandResult:
-    """Return a compact snapshot of CPU, memory, disk usage and uptime."""
+    """Format the structured system snapshot returned by the Desktop Agent."""
     del command
 
     try:
-        cpu_percent = psutil.cpu_percent(interval=0.1)
-        memory_percent = psutil.virtual_memory().percent
-        disk_percent = psutil.disk_usage(os.path.abspath(os.sep)).percent
-        uptime_seconds = max(0, int(datetime.now().timestamp() - psutil.boot_time()))
-    except (OSError, RuntimeError):
+        result = get_agent_client().get_system_status()
+    except AgentClientError as error:
+        return CommandResult(False, str(error))
+
+    if not result.success or result.data is None:
         return CommandResult(
-            success=False,
-            message="Não foi possível consultar o status do computador.",
+            False,
+            result.message or "Não foi possível consultar o status do computador.",
         )
+
+    try:
+        cpu_percent = float(result.data["cpu_percent"])
+        memory_percent = float(result.data["memory_percent"])
+        disk_percent = float(result.data["disk_percent"])
+        uptime_seconds = max(0, int(result.data["uptime_seconds"]))
+    except (KeyError, TypeError, ValueError):
+        return CommandResult(False, "O Desktop Agent retornou dados inválidos.")
 
     days, remainder = divmod(uptime_seconds, 86400)
     hours, remainder = divmod(remainder, 3600)

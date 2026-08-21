@@ -1,4 +1,4 @@
-# NETuno v0.8
+# NETuno v0.9
 
 NETuno é um assistente pessoal digital em desenvolvimento, criado para combinar **assistência**, **automação** e **orquestração de dispositivos e serviços** em uma única experiência.
 
@@ -58,7 +58,7 @@ NETuno, iniciar modo estudo.
 
 ## Funcionalidades atuais
 
-Na v0.8, o NETuno consegue:
+Na v0.9, o NETuno consegue:
 
 - informar a hora local;
 - informar a data local;
@@ -76,6 +76,7 @@ Na v0.8, o NETuno consegue:
 - exibir o status do Core e o histórico visual da sessão;
 - encerrar a aplicação;
 - responder de forma previsível a comandos não reconhecidos.
+- delegar aplicativos, métricas do sistema e Spotify a um Desktop Agent local.
 
 Exemplos de comandos:
 
@@ -103,14 +104,19 @@ sair
 
 ## Como funciona hoje
 
-O terminal, a API HTTP e o cliente web utilizam o mesmo Core:
+O terminal, a API HTTP e o cliente web utilizam o mesmo Core. As ações que
+controlam o computador são delegadas a um processo local separado:
 
 ```text
-Terminal ───────────────┐
-                        ↓
-                    NETuno Core
-                        ↑
-Web Client → HTTP API ──┘
+Web Client
+    ↓
+NETuno API
+    ↓
+NETuno Core
+    ↓
+Desktop Agent
+    ↓
+Sistema / Apps / Spotify
 ```
 
 O fluxo principal da aplicação é:
@@ -125,6 +131,10 @@ ParsedCommand
 Router
       ↓
 handler em commands/
+      ↓
+AgentClient (para ações locais migradas)
+      ↓
+Desktop Agent
       ↓
 CommandResult
       ↓
@@ -143,12 +153,16 @@ resposta no terminal
 - `core/command_parser.py`: normaliza o texto, reconhece aliases e produz uma intenção estruturada.
 - `core/models.py`: define `Intent`, `ParsedCommand` e `CommandResult`.
 - `core/router.py`: encaminha cada intenção para o handler correspondente.
-- `commands/system.py`: hora, data, status do computador e encerramento.
-- `commands/apps.py`: abertura dos aplicativos explicitamente suportados.
+- `core/agent_client.py`: centraliza ações HTTP estruturadas enviadas ao Agent.
+- `desktop_agent/app.py`: expõe os endpoints locais do Desktop Agent.
+- `desktop_agent/schemas.py`: define ações, targets e respostas permitidas.
+- `desktop_agent/executor.py`: executa apenas ações explícitas no dispositivo.
+- `commands/system.py`: mantém hora/data locais e formata o status vindo do Agent.
+- `commands/apps.py`: solicita ao Agent a abertura de aplicativos suportados.
 - `commands/web.py`: abertura dos sites explicitamente suportados.
 - `commands/notes.py`: regras de criação, listagem e remoção de notas.
 - `commands/modes.py`: orquestra modos e comandos compostos reutilizando handlers.
-- `commands/music.py`: traduz intenções musicais em operações do Spotify.
+- `commands/music.py`: traduz intenções musicais em ações estruturadas do Agent.
 - `integrations/spotify.py`: encapsula AppleScript e o protocolo local do Spotify.
 - `database/database.py`: inicialização do SQLite e única camada que executa SQL.
 - `data/netuno.db`: banco local criado automaticamente e não versionado.
@@ -156,7 +170,7 @@ resposta no terminal
 
 O parser não executa ações diretamente, e os handlers não imprimem na tela. Eles devolvem um `CommandResult`. Essa separação permite testar interpretação e roteamento sem disparar efeitos colaterais e prepara o projeto para futuras entradas por voz, interface gráfica e integrações externas.
 
-## Arquitetura futura
+## Arquitetura da v0.9
 
 Conforme o projeto evoluir, a arquitetura tende a separar o núcleo do assistente, as integrações externas e os clientes de interface:
 
@@ -189,7 +203,7 @@ Conforme o projeto evoluir, a arquitetura tende a separar o núcleo do assistent
 Texto     Text-to-Speech
 ```
 
-Para acesso portátil, a visão inclui também:
+O primeiro passo da separação entre interpretação e execução já está ativo:
 
 ```text
 NETuno Web/Mobile Client
@@ -205,7 +219,9 @@ NETuno Web/Mobile Client
 Sistema Spotify  Aplicativos
 ```
 
-O cliente web/mobile não executaria ações diretamente no computador. Essas ações seriam delegadas ao agent local.
+O cliente web não executa ações diretamente no computador. O Core envia ao
+Agent somente ações enumeradas e argumentos validados, nunca comandos de shell
+ou frases do usuário.
 
 ## Voz e wake word
 
@@ -258,12 +274,31 @@ Instale as dependências:
 python3 -m pip install -r requirements.txt
 ```
 
-A v0.8 utiliza `psutil` para consultar as métricas do computador e `sqlite3`,
-da biblioteca padrão, para persistir notas localmente.
+A v0.9 utiliza `psutil` no Desktop Agent para consultar métricas e `sqlite3`,
+da biblioteca padrão, para persistir notas localmente no Core.
 
 ## Executar
 
-Na raiz do projeto:
+### Desktop Agent
+
+Inicie primeiro o processo local responsável pelas ações do computador:
+
+```bash
+python3 -m uvicorn desktop_agent.app:app --port 8001
+```
+
+O Uvicorn utiliza `127.0.0.1` por padrão. Não exponha o Agent em `0.0.0.0` ou
+na internet. A URL usada pelo Core pode ser alterada com `NETUNO_AGENT_URL`, mas
+somente endereços localhost são aceitos. O fallback é
+`http://127.0.0.1:8001`.
+
+Como proteção adicional, o próprio serviço rejeita com HTTP 403 qualquer
+request cujo endereço real do cliente não seja `127.0.0.1` ou `::1`, mesmo se
+for iniciado acidentalmente em uma interface de rede externa.
+
+### Terminal
+
+Em outro terminal, na raiz do projeto:
 
 ```bash
 python3 main.py
@@ -307,13 +342,21 @@ uma remoção, a lista é numerada novamente a partir de `1`; os identificadores
 internos do SQLite permanecem estáveis.
 
 Os valores do status variam de acordo com o computador no momento da consulta.
+Se o Desktop Agent estiver desligado, as ações migradas retornam
+`O NETuno Desktop Agent não está disponível.` sem fallback local. Hora, data,
+notas e demais comandos independentes do Agent continuam funcionando.
+Uma `NETUNO_AGENT_URL` externa ou inválida também não impede a inicialização do
+Core; somente comandos dependentes do Agent retornam
+`A configuração do NETuno Desktop Agent é inválida.`
 
 ## API local
 
 A API reutiliza integralmente o fluxo `Assistant → CommandParser → Router →
 handlers`. O terminal continua sendo uma interface válida e independente.
 
-Inicie a API durante o desenvolvimento:
+### NETuno Core API
+
+Inicie a API durante o desenvolvimento em outro terminal:
 
 ```bash
 uvicorn api.app:app --reload
@@ -381,8 +424,9 @@ npm run dev
 ```
 
 Abra `http://localhost:5173/`. Ao carregar, a interface consulta `/health` e
-exibe `Online` ou `Offline`. Comandos podem ser enviados pelo botão ou pela tecla
-Enter, e as mensagens ficam no histórico da sessão até a página ser recarregada.
+exibe um aviso se o Core estiver offline. Comandos podem ser enviados pelo botão
+ou pela tecla Enter, e as mensagens ficam no histórico da sessão até a página
+ser recarregada.
 
 A URL da API pode ser alterada durante o desenvolvimento com
 `VITE_NETUNO_API_URL`; sem essa variável, o cliente utiliza
@@ -399,7 +443,16 @@ Execute a suíte com:
 python3 -m unittest discover -v
 ```
 
-Os testes de aplicativos e navegador usam mocks para evitar efeitos colaterais durante a execução.
+Execute também os testes e o build do frontend:
+
+```bash
+cd frontend
+npm test -- --run
+npm run build
+```
+
+Os testes do Agent, aplicativos, Spotify e navegador usam mocks para evitar
+efeitos colaterais durante a execução.
 
 ## Roadmap
 
@@ -530,10 +583,14 @@ Entregue:
 
 ### v0.9 — NETuno Desktop Agent
 
-- processo local responsável por ações no computador;
-- comunicação com o NETuno Core;
-- execução controlada de comandos no dispositivo;
-- preparação para controle remoto seguro.
+Entregue:
+
+- processo FastAPI local responsável por ações no computador;
+- contrato enumerado para aplicativos, métricas e Spotify;
+- `AgentClient` como única camada HTTP entre Core e Agent;
+- allowlists e rejeição de campos/comandos arbitrários;
+- tratamento explícito de Agent offline sem fallback local;
+- testes completos sem efeitos reais no dispositivo.
 
 ### v1.0 — NETuno portátil
 
@@ -591,10 +648,12 @@ Entregue:
 - os controles avançados do Spotify dependem do aplicativo instalado no macOS;
 - a API não possui autenticação e deve permanecer restrita a `127.0.0.1`;
 - o frontend é local e não possui autenticação ou acesso remoto;
+- o Desktop Agent deve ser iniciado separadamente e aceita somente localhost;
+- não há autenticação, pareamento ou descoberta de dispositivos no Agent;
 - o histórico visual desaparece ao recarregar a página;
 - não há reconhecimento ou síntese de voz;
 - ainda não existe wake word;
 - VS Code e Spotify só são abertos no macOS nesta versão;
 - apenas aplicativos e sites explicitamente suportados podem ser executados;
-- ainda não há frontend web/mobile ou Desktop Agent;
+- ainda não há cliente mobile ou acesso remoto;
 - não há LLM no projeto atual.

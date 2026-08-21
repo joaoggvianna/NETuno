@@ -8,31 +8,40 @@ from commands.music import (
     previous_track,
     resume_music,
 )
+from core.agent_client import AgentResult, AgentUnavailableError
 from core.models import Intent, ParsedCommand
-from integrations.spotify import SpotifyError
 
 
 class MusicCommandsTestCase(unittest.TestCase):
-    @patch("commands.music.spotify")
-    def test_controls_playback_through_integration(self, spotify_mock) -> None:
+    @patch("commands.music.get_agent_client")
+    def test_delegates_playback_controls_to_agent(self, get_client_mock) -> None:
+        client = get_client_mock.return_value
+        client.spotify_play.return_value = AgentResult(True)
+        client.spotify_pause.return_value = AgentResult(True)
+        client.spotify_next.return_value = AgentResult(True)
+        client.spotify_previous.return_value = AgentResult(True)
         commands = (
-            (play_music, Intent.PLAY_MUSIC, spotify_mock.play),
-            (resume_music, Intent.RESUME_MUSIC, spotify_mock.play),
-            (pause_music, Intent.PAUSE_MUSIC, spotify_mock.pause),
-            (next_track, Intent.NEXT_TRACK, spotify_mock.next_track),
-            (previous_track, Intent.PREVIOUS_TRACK, spotify_mock.previous_track),
+            (play_music, Intent.PLAY_MUSIC, "spotify_play"),
+            (resume_music, Intent.RESUME_MUSIC, "spotify_play"),
+            (pause_music, Intent.PAUSE_MUSIC, "spotify_pause"),
+            (next_track, Intent.NEXT_TRACK, "spotify_next"),
+            (previous_track, Intent.PREVIOUS_TRACK, "spotify_previous"),
         )
 
-        for handler, intent, integration_method in commands:
+        for handler, intent, method_name in commands:
             with self.subTest(intent=intent):
                 result = handler(ParsedCommand(intent, "música", target="spotify"))
                 self.assertTrue(result.success)
-                integration_method.assert_called_once_with()
-                integration_method.reset_mock()
+                getattr(client, method_name).assert_called_once_with()
+                getattr(client, method_name).reset_mock()
 
-    @patch("commands.music.spotify")
-    def test_returns_integration_error(self, spotify_mock) -> None:
-        spotify_mock.pause.side_effect = SpotifyError("Spotify indisponível.")
+    @patch("commands.music.get_agent_client")
+    def test_returns_agent_execution_error(self, get_client_mock) -> None:
+        get_client_mock.return_value.spotify_pause.return_value = AgentResult(
+            False,
+            "Spotify indisponível.",
+            "execution_error",
+        )
 
         result = pause_music(
             ParsedCommand(Intent.PAUSE_MUSIC, "pausar spotify", target="spotify")
@@ -41,8 +50,12 @@ class MusicCommandsTestCase(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertEqual(result.message, "Spotify indisponível.")
 
-    @patch("commands.music.spotify")
-    def test_opens_search_but_does_not_claim_playback(self, spotify_mock) -> None:
+    @patch("commands.music.get_agent_client")
+    def test_opens_search_but_does_not_claim_playback(
+        self, get_client_mock
+    ) -> None:
+        client = get_client_mock.return_value
+        client.spotify_search.return_value = AgentResult(True)
         command = ParsedCommand(
             Intent.PLAY_MUSIC,
             "toque a música Everlong",
@@ -54,9 +67,29 @@ class MusicCommandsTestCase(unittest.TestCase):
         result = play_music(command)
 
         self.assertFalse(result.success)
-        spotify_mock.open_search.assert_called_once_with("Everlong")
+        client.spotify_search.assert_called_once_with("Everlong")
         self.assertIn('Abri a busca pela música "Everlong"', result.message)
         self.assertIn("não consegue iniciar", result.message)
+
+    @patch("commands.music.get_agent_client")
+    def test_returns_friendly_error_when_agent_is_offline(
+        self, get_client_mock
+    ) -> None:
+        get_client_mock.return_value.spotify_pause.side_effect = (
+            AgentUnavailableError(
+                "O NETuno Desktop Agent não está disponível."
+            )
+        )
+
+        result = pause_music(
+            ParsedCommand(Intent.PAUSE_MUSIC, "pausar spotify", target="spotify")
+        )
+
+        self.assertFalse(result.success)
+        self.assertEqual(
+            result.message,
+            "O NETuno Desktop Agent não está disponível.",
+        )
 
 
 if __name__ == "__main__":
