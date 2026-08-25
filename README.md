@@ -1,8 +1,12 @@
-# NETuno v0.9
+# NETuno v1.0
 
-NETuno é um assistente pessoal digital em desenvolvimento, criado para combinar **assistência**, **automação** e **orquestração de dispositivos e serviços** em uma única experiência.
+NETuno é um **assistente pessoal de desktop local orientado a voz, projetado
+para evoluir em macOS, Windows e Linux**.
 
-A visão do produto é ir além de um simples administrador do computador. O objetivo é que o NETuno consiga receber comandos por texto e voz, responder ao usuário, lembrar informações, executar ações em aplicativos, consultar serviços conectados e, futuramente, operar a partir de uma interface web ou mobile como um assistente portátil.
+A v1.0 adiciona uma interface local de voz push-to-talk ao Core determinístico
+existente. O usuário inicia cada gravação explicitamente, o áudio é transcrito
+localmente, o comando percorre o mesmo parser e router das demais interfaces e
+a resposta é falada por uma engine local do sistema operacional.
 
 O projeto está sendo desenvolvido incrementalmente e sem depender de APIs pagas de IA. A base atual utiliza interpretação determinística de comandos, mantendo a arquitetura simples, testável e fácil de explicar.
 
@@ -40,9 +44,9 @@ Responsável pelas formas de interação com o usuário:
 - terminal;
 - voz;
 - wake word "NETuno";
-- interface web;
-- interface mobile/PWA;
-- aplicação desktop/agent local.
+- interface web local;
+- Desktop Agent local;
+- interface de voz push-to-talk.
 
 A visão de longo prazo é permitir interações como:
 
@@ -58,7 +62,7 @@ NETuno, iniciar modo estudo.
 
 ## Funcionalidades atuais
 
-Na v0.9, o NETuno consegue:
+Na v1.0, o NETuno consegue:
 
 - informar a hora local;
 - informar a data local;
@@ -77,6 +81,10 @@ Na v0.9, o NETuno consegue:
 - encerrar a aplicação;
 - responder de forma previsível a comandos não reconhecidos.
 - delegar aplicativos, métricas do sistema e Spotify a um Desktop Agent local.
+- capturar um comando pelo microfone sob solicitação explícita;
+- transcrever o áudio com Whisper executado localmente;
+- enviar a transcrição ao mesmo NETuno Core usado pelas outras interfaces;
+- falar a mensagem do `CommandResult` por Text-to-Speech local.
 
 Exemplos de comandos:
 
@@ -104,19 +112,14 @@ sair
 
 ## Como funciona hoje
 
-O terminal, a API HTTP e o cliente web utilizam o mesmo Core. As ações que
+O terminal, a API HTTP, o cliente web e a interface de voz utilizam o mesmo
+Core. As ações que
 controlam o computador são delegadas a um processo local separado:
 
 ```text
-Web Client
-    ↓
-NETuno API
-    ↓
-NETuno Core
-    ↓
-Desktop Agent
-    ↓
-Sistema / Apps / Spotify
+Terminal ──────┐
+Web/API ───────┼→ NETuno Core → Desktop Agent → Sistema / Apps / Spotify
+Voice ─────────┘
 ```
 
 O fluxo principal da aplicação é:
@@ -154,6 +157,11 @@ resposta no terminal
 - `core/models.py`: define `Intent`, `ParsedCommand` e `CommandResult`.
 - `core/router.py`: encaminha cada intenção para o handler correspondente.
 - `core/agent_client.py`: centraliza ações HTTP estruturadas enviadas ao Agent.
+- `voice/audio.py`: captura áudio mono do microfone apenas em memória.
+- `voice/stt.py`: transforma áudio em texto com um modelo Whisper local.
+- `voice/tts.py`: encapsula a síntese de voz local.
+- `voice/voice_assistant.py`: coordena voz e `Assistant.process_command` sem interpretar intents.
+- `voice_main.py`: inicia o loop push-to-talk independente.
 - `desktop_agent/app.py`: expõe os endpoints locais do Desktop Agent.
 - `desktop_agent/schemas.py`: define ações, targets e respostas permitidas.
 - `desktop_agent/executor.py`: executa apenas ações explícitas no dispositivo.
@@ -170,44 +178,34 @@ resposta no terminal
 
 O parser não executa ações diretamente, e os handlers não imprimem na tela. Eles devolvem um `CommandResult`. Essa separação permite testar interpretação e roteamento sem disparar efeitos colaterais e prepara o projeto para futuras entradas por voz, interface gráfica e integrações externas.
 
-## Arquitetura da v0.9
+## Arquitetura da v1.0
 
 Conforme o projeto evoluir, a arquitetura tende a separar o núcleo do assistente, as integrações externas e os clientes de interface:
 
 ```text
-                Usuário
-                  │
-        ┌─────────┴─────────┐
-        │                   │
-      Texto                Voz
-                            │
-                     Speech-to-Text
-        │                   │
-        └─────────┬─────────┘
-                  ↓
-             NETuno Core
-                  ↓
-          Parser / Intents
-                  ↓
-                Router
-                  ↓
-      ┌───────────┼───────────┐
-      ↓           ↓           ↓
-   Sistema     Spotify      Memória
-      │
-      ↓
- CommandResult
-      │
- ┌────┴────┐
- ↓         ↓
-Texto     Text-to-Speech
+microfone
+   ↓
+voice/audio.py
+   ↓
+voice/stt.py (Whisper local)
+   ↓
+VoiceAssistant
+   ↓
+Assistant.process_command(text)
+   ↓
+CommandParser → Router → handlers
+   ↓
+CommandResult
+   ↓
+voice/tts.py → alto-falante
 ```
 
-O primeiro passo da separação entre interpretação e execução já está ativo:
+Voz é somente uma interface. Ela não interpreta intents, não acessa handlers e
+não conversa diretamente com o Desktop Agent. Comandos que exigem ações no
+computador preservam a fronteira existente:
 
 ```text
-NETuno Web/Mobile Client
-          │
+    Voice Interface
           ↓
       NETuno Core
           │
@@ -223,33 +221,16 @@ O cliente web não executa ações diretamente no computador. O Core envia ao
 Agent somente ações enumeradas e argumentos validados, nunca comandos de shell
 ou frases do usuário.
 
-## Voz e wake word
+## Voice Interface
 
-A voz faz parte da visão principal do produto, não apenas como recurso estético.
+Cada interação começa somente após o usuário pressionar Enter. A captura dura
+cinco segundos por padrão e permanece apenas em memória. `sounddevice` captura
+o microfone, `faster-whisper` executa o modelo Whisper localmente e o adaptador
+de TTS usa as vozes disponíveis no sistema operacional.
 
-O fluxo desejado é:
-
-```text
-microfone
-   ↓
-wake word: "NETuno"
-   ↓
-gravação do comando
-   ↓
-Speech-to-Text
-   ↓
-NETuno Core
-   ↓
-CommandResult
-   ↓
-Text-to-Speech
-   ↓
-resposta falada
-```
-
-A intenção é priorizar tecnologias locais e gratuitas sempre que possível, evitando dependência obrigatória de APIs pagas.
-
-A detecção contínua da wake word será adicionada apenas quando o núcleo do assistente estiver mais maduro, pois envolve decisões adicionais de desempenho, privacidade e execução em segundo plano.
+O prefixo falado `NETuno` ou `NETuno,` é opcional e apenas removido antes do
+texto ser entregue ao Core. Isso não é uma wake word: a v1.0 não possui escuta
+contínua, gravação em background ou microfone permanentemente ativo.
 
 ## Identidade visual futura
 
@@ -267,6 +248,7 @@ A proposta é uma interface limpa e sofisticada, evitando excesso de elementos d
 
 - Python 3.9 ou superior
 - macOS para a abertura de Visual Studio Code e Spotify
+- microfone e saída de áudio para a interface de voz
 
 Instale as dependências:
 
@@ -274,8 +256,12 @@ Instale as dependências:
 python3 -m pip install -r requirements.txt
 ```
 
-A v0.9 utiliza `psutil` no Desktop Agent para consultar métricas e `sqlite3`,
-da biblioteca padrão, para persistir notas localmente no Core.
+A v1.0 utiliza `sounddevice` para captura, `faster-whisper` para STT local e a
+engine nativa do sistema (`say`, PowerShell/SAPI ou `espeak`) para TTS. O
+primeiro uso de um modelo Whisper pode exigir seu
+download; depois de armazenado no cache local, a transcrição não depende de
+uma API ou chamada externa. O modelo padrão é `base`, que oferece um equilíbrio
+melhor entre precisão em português, tamanho e velocidade.
 
 ## Executar
 
@@ -303,6 +289,49 @@ Em outro terminal, na raiz do projeto:
 ```bash
 python3 main.py
 ```
+
+### Voz
+
+Inicie a interface push-to-talk em um terminal separado:
+
+```bash
+python3 voice_main.py
+```
+
+Pressione Enter quando quiser falar. O NETuno grava por até cinco segundos,
+mostra a transcrição e a resposta no terminal e fala a mesma mensagem retornada
+pelo Core. Para comandos de aplicativos, Spotify ou status, mantenha também o
+Desktop Agent em execução.
+
+Configurações simples disponíveis:
+
+```bash
+NETUNO_STT_MODEL=small python3 voice_main.py
+NETUNO_STT_LANGUAGE=pt NETUNO_VOICE_DURATION=7 python3 voice_main.py
+```
+
+- `NETUNO_STT_MODEL`: modelo do faster-whisper; padrão `base`.
+- `NETUNO_STT_LANGUAGE`: idioma esperado; padrão `pt`.
+- `NETUNO_VOICE_DURATION`: limite da gravação em segundos; padrão `5`.
+
+No macOS, conceda acesso ao microfone para o Terminal quando solicitado. Linux
+pode exigir PortAudio instalado pelo gerenciador de pacotes. Vozes e qualidade
+do TTS variam conforme o sistema operacional.
+
+Exemplo:
+
+```text
+NETuno Voice
+
+Pressione ENTER para falar.
+Ouvindo...
+Você: NETuno, que horas são
+NETuno: Agora são 10:30.
+```
+
+O áudio não é salvo, enviado a serviços externos ou capturado em background.
+Não há wake word na v1.0. Se não houver fala reconhecível, o Core não é chamado.
+Falhas de microfone, STT e TTS são apresentadas no terminal sem encerrar o Core.
 
 Exemplo:
 
@@ -592,41 +621,37 @@ Entregue:
 - tratamento explícito de Agent offline sem fallback local;
 - testes completos sem efeitos reais no dispositivo.
 
-### v1.0 — NETuno portátil
+### v1.0 — Voice Interface
 
-- integração entre Client, Core e Desktop Agent;
-- acesso pela web/PWA;
-- status remoto do dispositivo;
-- execução remota de ações autorizadas.
-
-### v1.1 — Entrada e saída por voz
-
+- captura local push-to-talk;
 - Speech-to-Text local;
-- Text-to-Speech local;
-- camada de voz desacoplada do Core;
-- respostas faladas.
+- integração com o Core determinístico;
+- Text-to-Speech local.
 
-### v1.2 — Wake word "NETuno"
+### v1.1 — Wake Word "NETuno"
 
-- detecção local da palavra de ativação;
-- escuta passiva controlada;
-- gravação apenas após ativação;
-- indicadores claros de microfone ativo;
-- configurações de privacidade e ativação/desativação.
+- ativação explícita por palavra-chave local;
+- controles claros de privacidade e microfone.
 
-### v1.3 — Linguagem mais flexível
+### v1.2 — Desktop Agent multiplataforma
 
-- melhorar interpretação de frases;
-- aliases dinâmicos;
-- extração de entidades e argumentos;
-- avaliar NLP local antes de introduzir LLM.
+- ações locais equivalentes em macOS, Windows e Linux.
 
-### v2.0 — Inteligência local opcional
+### v1.3 — Empacotamento e execução em background
 
-- integração opcional com modelo local;
-- uso como fallback para comandos não reconhecidos;
-- preservar intents estruturadas e handlers determinísticos;
-- evitar tornar a arquitetura dependente de uma LLM.
+- distribuição instalável;
+- ciclo de vida controlado do Agent e das interfaces.
+
+### v1.4 — Refinamento da experiência de voz
+
+- feedback de captura;
+- configuração simples de voz e dispositivos;
+- melhoria de latência e precisão.
+
+### v2.0 — Interpretação inteligente local opcional
+
+- interpretação local como recurso opcional;
+- preservação do Core determinístico e das ações estruturadas.
 
 ## Princípios do projeto
 
@@ -651,9 +676,13 @@ Entregue:
 - o Desktop Agent deve ser iniciado separadamente e aceita somente localhost;
 - não há autenticação, pareamento ou descoberta de dispositivos no Agent;
 - o histórico visual desaparece ao recarregar a página;
-- não há reconhecimento ou síntese de voz;
-- ainda não existe wake word;
+- a voz exige que o usuário pressione Enter antes de cada captura;
+- o modelo `base` pode ser mais lento em computadores antigos; `small` melhora
+  a precisão ao custo de um download maior e mais processamento;
+- a primeira configuração do Whisper pode precisar baixar o modelo;
+- vozes de TTS e suporte a dispositivos dependem do sistema operacional;
+- ainda não existe wake word ou escuta contínua;
 - VS Code e Spotify só são abertos no macOS nesta versão;
 - apenas aplicativos e sites explicitamente suportados podem ser executados;
-- ainda não há cliente mobile ou acesso remoto;
+- não há cliente mobile nem acesso remoto;
 - não há LLM no projeto atual.
